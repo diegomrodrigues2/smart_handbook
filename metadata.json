@@ -1,0 +1,5 @@
+{
+  "name": "Smart Knowledge Handbook",
+  "description": "A cognitive agent interface and smart handbook for managing complex context, mathematical theorems, and engineering documentation using Gemini 3.",
+  "requestFramePermissions": []
+}
