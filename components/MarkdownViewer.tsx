@@ -13,6 +13,7 @@ interface MarkdownViewerProps {
     onClose: () => void;
     resolveImage?: (src: string) => Promise<string | null>;
     onSelectFile?: (href: string) => void;
+    onStartLearning?: () => void;
 }
 
 const MarkdownImage: React.FC<{ src: string; alt?: string; resolveImage?: (src: string) => Promise<string | null> }> = ({ src, alt, resolveImage }) => {
@@ -35,7 +36,7 @@ const MarkdownImage: React.FC<{ src: string; alt?: string; resolveImage?: (src: 
     return <img src={resolvedSrc} alt={alt} className="max-w-full h-auto rounded-lg shadow-md my-6 border border-gray-100" />;
 };
 
-const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content, fileName, onUpdateContent, onClose, resolveImage, onSelectFile }) => {
+const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content, fileName, onUpdateContent, onClose, resolveImage, onSelectFile, onStartLearning }) => {
     const [isSourceMode, setIsSourceMode] = useState(false);
     const [localContent, setLocalContent] = useState(content);
 
@@ -59,6 +60,16 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content, fileName, onUp
                     <button onClick={onClose} className="ml-3 text-gray-400 hover:text-red-500 transition-colors"><i className="fa-solid fa-xmark text-xs"></i></button>
                 </div>
                 <div className="flex-1"></div>
+                {onStartLearning && (
+                    <button
+                        onClick={onStartLearning}
+                        className="text-xs border border-indigo-200 rounded px-3 py-1 mr-2 transition-all bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 hover:from-indigo-100 hover:to-purple-100 font-medium flex items-center gap-1.5"
+                        title="Iniciar Modo Aprendizado"
+                    >
+                        <i className="fa-solid fa-graduation-cap"></i>
+                        <span>Aprender</span>
+                    </button>
+                )}
                 <button
                     onClick={() => setIsSourceMode(!isSourceMode)}
                     className={`text-xs font-mono border border-gray-200 rounded px-3 py-1 transition-all ${isSourceMode

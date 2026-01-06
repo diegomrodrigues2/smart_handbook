@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import FileTree from './components/FileTree';
 import MarkdownViewer from './components/MarkdownViewer';
 import ChatInterface from './components/ChatInterface';
+import LearningMode from './components/LearningMode';
 import { FileNode } from './types';
 
 const App: React.FC = () => {
@@ -12,6 +13,7 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [learningMode, setLearningMode] = useState(false);
 
   // Helper to find a node by ID recursively
   const findNode = (nodes: FileNode[], id: string): FileNode | null => {
@@ -330,14 +332,24 @@ const App: React.FC = () => {
 
         <div className="flex-1 p-4 overflow-hidden">
           {selectedFile && selectedFile.content !== undefined ? (
-            <MarkdownViewer
-              content={selectedFile.content}
-              fileName={selectedFile.name}
-              onUpdateContent={updateFileContent}
-              onClose={() => setSelectedFileId(null)}
-              resolveImage={resolveImage}
-              onSelectFile={handleFileLinkClick}
-            />
+            learningMode ? (
+              <LearningMode
+                noteContent={selectedFile.content}
+                noteName={selectedFile.name}
+                noteId={selectedFile.id}
+                onClose={() => setLearningMode(false)}
+              />
+            ) : (
+              <MarkdownViewer
+                content={selectedFile.content}
+                fileName={selectedFile.name}
+                onUpdateContent={updateFileContent}
+                onClose={() => setSelectedFileId(null)}
+                resolveImage={resolveImage}
+                onSelectFile={handleFileLinkClick}
+                onStartLearning={() => setLearningMode(true)}
+              />
+            )
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-gray-400">
               <i className="fa-regular fa-folder-open text-4xl mb-4"></i>
