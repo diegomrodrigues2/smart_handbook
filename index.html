@@ -1,43 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smart Knowledge Handbook</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"
-    />
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-      rel="stylesheet"
-    />
-    <style>
-      /* Custom scrollbar for a cleaner look */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-      .markdown-body h1 { font-size: 2.25em; font-weight: 700; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-      .markdown-body h2 { font-size: 1.75em; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
-      .markdown-body h3 { font-size: 1.5em; font-weight: 600; margin-top: 1.25em; margin-bottom: 0.5em; }
-      .markdown-body p { margin-bottom: 1em; line-height: 1.7; color: #334155; }
-      .markdown-body ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
-      .markdown-body code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-      .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 1em; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
-      .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1em; color: #475569; font-style: italic; background-color: #eff6ff; padding: 1rem; border-radius: 0 4px 4px 0; }
-    </style>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Knowledge Handbook</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    /* Custom scrollbar for a cleaner look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .markdown-body h1 {
+      font-size: 2.25em;
+      font-weight: 700;
+      margin-bottom: 0.5em;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.3em;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.75em;
+      font-weight: 600;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-body h3 {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin-top: 1.25em;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-body p {
+      margin-bottom: 1em;
+      line-height: 1.7;
+      color: #334155;
+    }
+
+    .markdown-body ul {
+      list-style-type: disc;
+      padding-left: 1.5em;
+      margin-bottom: 1em;
+    }
+
+    .markdown-body code {
+      background-color: #f1f5f9;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .markdown-body pre {
+      background-color: #f6f8fa;
+      color: #24292f;
+      padding: 0.5em 0.75em;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin-bottom: 1em;
+      border: 1px solid #d0d7de;
+    }
+
+    .markdown-body pre code {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      font-size: 0.95em;
+    }
+
+    .markdown-body blockquote {
+      border-left: 4px solid #3b82f6;
+      padding-left: 1em;
+      color: #475569;
+      font-style: italic;
+      background-color: #eff6ff;
+      padding: 1rem;
+      border-radius: 0 4px 4px 0;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -48,15 +107,19 @@
     "react": "https://esm.sh/react@^19.2.3",
     "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
     "remark-math": "https://esm.sh/remark-math@^6.0.0",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0",
+    "remark-breaks": "https://esm.sh/remark-breaks@^4.0.0",
     "rehype-katex": "https://esm.sh/rehype-katex@^7.0.1"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-50 text-slate-800 h-screen overflow-hidden">
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+
+<body class="bg-gray-50 text-slate-800 h-screen overflow-hidden">
+  <div id="root"></div>
+  <script type="module" src="./index.tsx"></script>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

@@ -1,0 +1,31 @@
+/* Global Styles */
+.prose {
+    max-width: none;
+}
+
+.prose p {
+    margin-bottom: 1.25em;
+    line-height: 1.6;
+}
+
+/* Ensure line breaks are preserved in markdown if they exist */
+.prose {
+    /* Removed white-space: pre-wrap to fix markdown rendering */
+}
+
+/* Specific fix for problem descriptions */
+.prose.prose-sm {
+    font-size: 0.925rem;
+}
+
+/* Fix for mathematical expressions truncation */
+.katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Chat message formatting */
+.chat-message-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+}

@@ -1,5 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
-import { LearningConcept, LearningMessage, LearningSession, SuggestedProblem, IntroductionContent } from "../types";
+import { LearningConcept, LearningMessage, LearningSession, SuggestedProblem, IntroductionContent, SubjectMode } from "../types";
+import {
+    getConceptExtractionPrompt,
+    getSocraticTutorPrompt,
+    getIntroductionPrompt,
+    getStepByStepSolutionPrompt
+} from "./prompts";
 
 const apiKey = process.env.API_KEY || '';
 
@@ -15,74 +21,8 @@ const getClient = () => {
 const MODEL_ID = "gemini-3-flash-preview";
 
 // ============================================================================
-// SYSTEM PROMPTS - Pedagogical Instructions
+// RESPONSE EVALUATION PROMPT (same for all modes)
 // ============================================================================
-
-const CONCEPT_EXTRACTION_PROMPT = `
-Você é um especialista em análise pedagógica de conteúdo acadêmico.
-Sua tarefa é analisar o conteúdo de uma nota de estudo e extrair os conceitos-chave que o estudante precisa aprender.
-
-REGRAS:
-1. Identifique entre 3 a 7 conceitos principais
-2. Ordene do mais fundamental ao mais avançado
-3. Identifique dependências entre conceitos (qual precisa ser entendido antes)
-4. Forneça uma descrição breve de cada conceito
-
-FORMATO DE RESPOSTA (JSON válido):
-{
-  "concepts": [
-    {
-      "id": "concept_1",
-      "title": "Nome do Conceito",
-      "description": "Breve descrição do que o estudante precisa entender",
-      "dependencies": []
-    },
-    {
-      "id": "concept_2",
-      "title": "Conceito Dependente",
-      "description": "Este depende do anterior",
-      "dependencies": ["concept_1"]
-    }
-  ]
-}
-
-CONTEÚDO DA NOTA:
-`;
-
-const SOCRATIC_TUTOR_PROMPT = `
-Você é um tutor socrático especializado em ensino adaptativo para estudantes de nível acadêmico avançado.
-Seu papel é guiar o estudante a descobrir e compreender conceitos através de perguntas, NUNCA dando respostas diretas.
-
-PRINCÍPIOS PEDAGÓGICOS OBRIGATÓRIOS:
-1. NUNCA forneça a resposta direta - faça perguntas que guiem o raciocínio
-2. EVITE analogias à vida cotidiana - prefira construções formais passo a passo
-3. Use problemas simplificados como scaffolding (ex: casos 2x2 antes de nxn, funções simples antes de gerais)
-4. Faça apenas UMA pergunta por vez
-5. Valide a compreensão antes de avançar
-6. Se o estudante errar, não corrija - faça perguntas que o levem a perceber o erro
-7. Assuma familiaridade com notação matemática formal e conceitos fundamentais
-
-ESTRATÉGIA DE SCAFFOLDING COM PROBLEMAS SIMPLIFICADOS:
-- Comece com casos particulares (dimensão baixa, números pequenos, exemplos concretos)
-- Guie o estudante a identificar padrões no caso simples
-- Depois peça para generalizar para o caso geral
-- Use contraexemplos estratégicos para testar compreensão
-
-NÍVEIS DE SUPORTE (Least-to-Most Prompting):
-- Nível 1 (Mínimo): Pergunta aberta sobre o conceito
-- Nível 2 (Conceitual): Sugira um caso simplificado para explorar primeiro
-- Nível 3 (Procedimental): Apresente um problema específico simples para resolver
-- Nível 4 (Modelo): Resolva um exemplo análogo simplificado passo a passo e peça para aplicar ao caso original
-
-CONTEXTO DA SESSÃO:
-- Conceito atual: {{CURRENT_CONCEPT}}
-- Descrição: {{CONCEPT_DESCRIPTION}}
-- Nível de suporte atual: {{SUPPORT_LEVEL}}
-- Histórico do diálogo: {{DIALOG_HISTORY}}
-
-RESPONDA EM PORTUGUÊS DO BRASIL.
-Use LaTeX para todas expressões matemáticas (formato: $expressão$ para inline, $$expressão$$ para display).
-`;
 
 const RESPONSE_EVALUATION_PROMPT = `
 Você é um avaliador pedagógico. Analise a resposta do estudante e determine:
@@ -105,11 +45,17 @@ CONCEITO SENDO AVALIADO: {{CONCEPT}}
 RESPOSTA DO ESTUDANTE: {{STUDENT_RESPONSE}}
 `;
 
+import { arrayBufferToBase64 } from "./pdfContentService";
+
 // ============================================================================
 // Service Functions
 // ============================================================================
 
-export const extractConcepts = async (noteContent: string): Promise<LearningConcept[]> => {
+export const extractConcepts = async (
+    noteContent: string,
+    mode: SubjectMode,
+    pdfData?: ArrayBuffer
+): Promise<LearningConcept[]> => {
     const ai = getClient();
     if (!ai) {
         console.error("API client not available");
@@ -117,9 +63,25 @@ export const extractConcepts = async (noteContent: string): Promise<LearningConc
     }
 
     try {
+        const prompt = getConceptExtractionPrompt(mode);
+
+        // Prepare content parts: PDF attachment if available, otherwise just text
+        const contentParts: any[] = [];
+        if (pdfData) {
+            contentParts.push({
+                inlineData: {
+                    data: arrayBufferToBase64(pdfData),
+                    mimeType: 'application/pdf'
+                }
+            });
+            contentParts.push({ text: prompt });
+        } else {
+            contentParts.push({ text: prompt + noteContent });
+        }
+
         const response = await ai.models.generateContent({
             model: MODEL_ID,
-            contents: CONCEPT_EXTRACTION_PROMPT + noteContent,
+            contents: [{ role: 'user', parts: contentParts }],
             config: { temperature: 0.3 }
         });
 
@@ -141,7 +103,8 @@ export const extractConcepts = async (noteContent: string): Promise<LearningConc
 
 export const generateIntroduction = async (
     conceptTitle: string,
-    conceptDescription: string
+    conceptDescription: string,
+    mode: SubjectMode
 ): Promise<IntroductionContent | null> => {
     const ai = getClient();
     if (!ai) {
@@ -149,20 +112,7 @@ export const generateIntroduction = async (
         return null;
     }
 
-    const prompt = `Você é um tutor matemático. Para o conceito "${conceptTitle}" (${conceptDescription}), forneça:
-
-1. DEFINIÇÃO FORMAL: A definição matemática rigorosa com notação LaTeX
-2. INTUIÇÃO: A intuição matemática/geométrica por trás do conceito (sem analogias cotidianas)
-3. PROBLEMAS: Entre problemas progressivos para explorar o conceito de diferentes ângulos (algébrico, geométrico, computacional, teórico)
-
-Os problemas DEVEM:
-- Ter IDs curtos e únicos (ex: "prob_1", "prob_2")
-- Ter exemplos numéricos concretos (matrizes 2x2, vetores em R², etc) sempre que possível
-- Cobrir diferentes perspectivas: alguns focados em manipulação simbólica, outros em visualização espacial e outros em aspectos computacionais ou teóricos
-- Ser progressivos (de exemplos triviais a casos que exigem generalização)
-- Ser auto-contidos e poderem ser resolvidos passo a passo socraticamente
-
-Responda usando LaTeX para todas expressões matemáticas.`;
+    const prompt = getIntroductionPrompt(mode, conceptTitle, conceptDescription);
 
     try {
         const response = await ai.models.generateContent({
@@ -197,7 +147,7 @@ Responda usando LaTeX para todas expressões matemáticas.`;
                                     },
                                     description: {
                                         type: "string",
-                                        description: "Descrição com exemplo numérico específico"
+                                        description: "Descrição completa do problema. Use quebras de linha duplas (\\n\\n) para separar as seções: Título, Enunciado, Exemplos e Restrições."
                                     },
                                     focus: {
                                         type: "string",
@@ -229,6 +179,7 @@ Responda usando LaTeX para todas expressões matemáticas.`;
 
 export const generateSocraticQuestion = async (
     session: LearningSession,
+    mode: SubjectMode,
     onChunk: (text: string) => void
 ): Promise<void> => {
     const ai = getClient();
@@ -248,21 +199,21 @@ export const generateSocraticQuestion = async (
         .map(m => `${m.role === 'tutor' ? 'TUTOR' : 'ESTUDANTE'}: ${m.text}`)
         .join('\n');
 
-    const prompt = SOCRATIC_TUTOR_PROMPT
+    const socraticPrompt = getSocraticTutorPrompt(mode)
         .replace('{{CURRENT_CONCEPT}}', currentConcept.title)
         .replace('{{CONCEPT_DESCRIPTION}}', currentConcept.description)
         .replace('{{SUPPORT_LEVEL}}', session.supportLevel.toString())
         .replace('{{DIALOG_HISTORY}}', dialogHistoryText || 'Início da sessão');
 
     const userContext = session.dialogHistory.length === 0
-        ? `Inicie a tutoria sobre o conceito "${currentConcept.title}". Faça sua primeira pergunta socrática baseada em um caso simplificado para explorar o conceito. Use LaTeX para expressões matemáticas.`
+        ? `Inicie a tutoria sobre o conceito "${currentConcept.title}". Faça sua primeira pergunta socrática baseada em um caso simplificado para explorar o conceito.`
         : `Continue a tutoria. O estudante respondeu: "${session.dialogHistory[session.dialogHistory.length - 1]?.text || ''}"`;
 
     try {
         const responseStream = await ai.models.generateContentStream({
             model: MODEL_ID,
             contents: [
-                { role: 'user', parts: [{ text: prompt }] },
+                { role: 'user', parts: [{ text: socraticPrompt }] },
                 { role: 'user', parts: [{ text: userContext }] }
             ],
             config: { temperature: 0.7 }
@@ -314,9 +265,11 @@ export const evaluateStudentResponse = async (
 export const createLearningSession = async (
     noteId: string,
     noteName: string,
-    noteContent: string
+    noteContent: string,
+    mode: SubjectMode,
+    pdfData?: ArrayBuffer
 ): Promise<LearningSession | null> => {
-    const concepts = await extractConcepts(noteContent);
+    const concepts = await extractConcepts(noteContent, mode, pdfData);
 
     if (concepts.length === 0) {
         return null;
@@ -337,22 +290,19 @@ export const generateStepByStepSolution = async (
     conceptTitle: string,
     problem: SuggestedProblem,
     dialogHistory: LearningMessage[],
+    mode: SubjectMode,
     onChunk: (chunk: string) => void
 ): Promise<void> => {
     const ai = getClient();
     if (!ai) return;
 
-    const prompt = `Você agora é um tutor resolvendo o problema passo a passo. 
-    CONCEITO: ${conceptTitle}
-    PROBLEMA: ${problem.title}
-    ENUNCIADO: ${problem.description}
+    const basePrompt = getStepByStepSolutionPrompt(mode)
+        .replace('{{CONCEPT_TITLE}}', conceptTitle)
+        .replace('{{PROBLEM_TITLE}}', problem.title)
+        .replace('{{PROBLEM_DESCRIPTION}}', problem.description);
 
-    Apresente a solução de forma extremamente didática e estruturada, seguindo este formato:
-    1. ESTRATÉGIA: Explique qual o raciocínio inicial e quais teoremas/definições serão usados.
-    2. RESOLUÇÃO PASSO A PASSO: Divida a resolução em etapas numeradas (A, B, C...). Use LaTeX para todas as fórmulas.
-    3. CONCLUSÃO: Apresente o resultado final e uma breve observação sobre a importância teórica desse resultado.
+    const prompt = `${basePrompt}
 
-    Mesmo que o aluno já tenha tentado algo no histórico, forneça a resolução completa desde o início.
     Histórico atual da conversa para contexto (se necessário):
     ${JSON.stringify(dialogHistory.map(m => ({ role: m.role, text: m.text })))}
     `;

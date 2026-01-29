@@ -1,0 +1,73 @@
+/* Estilos essenciais para text layer do PDF.js */
+.react-pdf__Page__textContent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+.react-pdf__Page__textContent span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    pointer-events: all;
+}
+
+.react-pdf__Page__textContent ::selection {
+    background: rgba(0, 123, 255, 0.3);
+}
+
+/* Estilos para annotation layer */
+.react-pdf__Page__annotations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.react-pdf__Page__annotations .annotationLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.react-pdf__Page__annotations .annotationLayer section,
+.react-pdf__Page__annotations .annotationLayer a {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Container da página - sem padding/margin extra */
+.react-pdf__Page {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.react-pdf__Page__canvas {
+    display: block;
+    user-select: none;
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Remover espaços extras */
+.react-pdf__Document {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}

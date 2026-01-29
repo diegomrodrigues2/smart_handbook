@@ -4,6 +4,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { ChatMessage } from '../types';
 import { streamGeminiResponse } from '../services/geminiService';
+import { useSubjectMode } from '../hooks';
 
 interface ChatInterfaceProps {
   currentContext: string;
@@ -12,6 +13,7 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, onClose }) => {
+  const { mode, isMathMode } = useSubjectMode();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, o
     // Pass the last 3 Q&A pairs (last 6 messages)
     const history = messages.slice(-6);
 
-    await streamGeminiResponse(userMsg.text, currentContext, history, (chunk) => {
+    await streamGeminiResponse(userMsg.text, currentContext, history, mode, (chunk) => {
       fullResponse += chunk;
       setMessages((prev) => {
         const existing = prev.find(m => m.id === responseId);
@@ -96,8 +98,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, o
             <i className="fa-solid fa-trash-can text-xs"></i>
           </button>
           <div className="text-[10px] text-gray-500 font-mono hidden sm:block">Gemini 3</div>
-          <button onClick={onClose} className="lg:hidden text-gray-500">
-            <i className="fa-solid fa-xmark"></i>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors p-1" title="Colapsar Chat">
+            <i className="fa-solid fa-angles-right"></i>
           </button>
         </div>
       </div>
@@ -106,8 +108,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, o
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="text-center mt-20 text-gray-400">
-            <i className="fa-solid fa-robot text-4xl mb-3 opacity-20"></i>
-            <p className="text-sm">Assistente Matemático (Gemini 3)<br />Pronto para ajudar.</p>
+            <i className={`fa-solid ${isMathMode ? 'fa-calculator' : 'fa-code'} text-4xl mb-3 opacity-20`}></i>
+            <p className="text-sm">Assistente de {isMathMode ? 'Matemática' : 'Computação'} (Gemini 3)<br />Pronto para ajudar.</p>
           </div>
         )}
 

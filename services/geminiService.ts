@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { ChatMessage } from "../types";
+import { ChatMessage, SubjectMode } from "../types";
+import { } from "./prompts";
 
 const apiKey = process.env.API_KEY || ''; // In a real app, ensure this is handled securely
 
@@ -16,6 +17,7 @@ export const streamGeminiResponse = async (
   prompt: string,
   context: string,
   history: ChatMessage[],
+  mode: SubjectMode,
   onChunk: (text: string) => void
 ) => {
   const ai = getClient();
@@ -30,20 +32,29 @@ export const streamGeminiResponse = async (
     ? history.map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.text}`).join('\n\n')
     : "None";
 
-  const fullPrompt = `
-You are an intelligent research assistant integrated into a "Smart Handbook".
-You have access to the user's current document content and recent conversation history. Use this context to answer their questions.
+  const personaDescription = mode === 'mathematics'
+    ? 'Você é um professor de matemática rigoroso e didático.'
+    : 'Você é um engenheiro de software e cientista da computação sênior, especialista em algoritmos e sistemas.';
 
-CURRENT DOCUMENT CONTEXT:
+  const fullPrompt = `
+${personaDescription} Você está integrado em um "Smart Handbook".
+Use o contexto do documento e o histórico da conversa para responder de forma concisa e academicamente rigorosa.
+
+MODO ATUAL: ${mode === 'mathematics' ? 'Matemática' : 'Computação'}
+
+CONTEXTO DO DOCUMENTO:
 ${context}
 
-CONVERSATION HISTORY (LAST 3 Q&A):
+HISTÓRICO DA CONVERSA:
 ${historyText}
 
-USER QUESTION:
+PERGUNTA DO USUÁRIO:
 ${prompt}
 
-Provide a helpful, concise, and academically rigorous response. Use LaTeX for math where appropriate (e.g., $E=mc^2$).
+${mode === 'mathematics'
+      ? 'Sempre use LaTeX para expressões matemáticas (ex: $E=mc^2$). Seja formal e focado em definições e teoremas.'
+      : 'Sempre use blocos de código markdown para exemplos de código. Seja prático e foque em eficiência e implementação.'}
+RESPOSTA EM PORTUGUÊS DO BRASIL.
 `;
 
 
