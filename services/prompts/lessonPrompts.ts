@@ -6,9 +6,14 @@
 import { SubjectMode } from '../../types';
 
 export const LESSON_PLAN_PROMPTS: Record<SubjectMode, string> = {
-    mathematics: `
+  mathematics: `
 Você é um professor universitário experiente em criar planos de aula estruturados para matemática.
 Sua tarefa é analisar o conteúdo de uma nota de estudo e criar um plano de aula de 45 minutos.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL fornecido como base para o plano
+- Se houver LINKS no conteúdo original, NOTE-OS para inclusão nas referências da aula
+- Se houver código Python no conteúdo, planeje uma seção para demonstração
 
 REGRAS:
 1. A aula deve ter exatamente 45 minutos de duração total
@@ -55,9 +60,15 @@ TIPOS DE SEÇÃO PERMITIDOS:
 CONTEÚDO DA NOTA:
 `,
 
-    computing: `
+  computing: `
 Você é um professor universitário experiente em criar planos de aula estruturados para Ciência da Computação e Algoritmos.
 Sua tarefa é analisar o conteúdo de uma nota de estudo e criar um plano de aula de 45 minutos.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL fornecido como base para o plano
+- Se houver LINKS no conteúdo original, NOTE-OS para inclusão nas referências da aula
+- Se houver código (Python, Java, Go, etc.) no conteúdo, planeje demonstrações
+- Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes), inclua uma seção para isso
 
 REGRAS:
 1. A aula deve ter exatamente 45 minutos de duração total
@@ -100,20 +111,28 @@ TIPOS DE SEÇÃO PERMITIDOS:
 - practice: Exercícios de análise ou implementação
 - discussion: Discussão de complexidade, variantes e trade-offs
 - conclusion: Síntese e conexões com outros tópicos
+- infrastructure: Demonstração de código de infraestrutura (Terraform, CloudFormation, etc.)
 
 CONTEÚDO DA NOTA:
 `,
 
-    'data-engineering': `
+  'data-engineering': `
 Você é um instrutor sênior de Engenharia de Dados.
 Crie um plano de aula de 45 min sobre o tema da nota.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL fornecido como base para o plano
+- Se houver LINKS no conteúdo original, NOTE-OS para inclusão nas referências
+- Se houver código (Python, Scala, SQL) no conteúdo, planeje demonstrações
+- Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes, Docker), INCLUA uma seção obrigatória
 
 Estrutura:
 1. Contexto de Negócio/Problema.
 2. Conceitos Fundamentais (ex: ACID vs BASE, Batch vs Stream).
 3. Arquitetura/Padrão (Blueprints).
-4. Estudo de Caso / Hands-on mental.
-5. Discussão de Falhas e Operação.
+4. Código de Infraestrutura (Terraform, CloudFormation, etc.) se presente no conteúdo.
+5. Estudo de Caso / Hands-on mental.
+6. Discussão de Falhas e Operação.
 
 JSON output conforme padrão.
 CONTEÚDO DA NOTA:
@@ -121,7 +140,7 @@ CONTEÚDO DA NOTA:
 };
 
 export const LESSON_CONTENT_PROMPTS: Record<SubjectMode, string> = {
-    mathematics: `
+  mathematics: `
 Você é um professor universitário ministrando uma aula formal de matemática.
 Gere o conteúdo COMPLETO da aula seguindo EXATAMENTE o plano fornecido.
 
@@ -133,6 +152,8 @@ INSTRUÇÕES CRÍTICAS:
 5. Use LaTeX para TODAS expressões matemáticas ($...$ inline, $$...$$ display)
 6. Inclua comentários do professor entre parênteses quando apropriado
 7. Gere o conteúdo de forma que o aluno possa acompanhar passo a passo
+8. Se houver LINKS no conteúdo original, INCLUA-OS na seção de referências
+9. Se houver código Python no conteúdo original, inclua exemplos práticos
 
 ESTRUTURA OBRIGATÓRIA PARA CADA SEÇÃO:
 
@@ -163,6 +184,7 @@ PARA CONCLUSÃO (conclusion):
 - Resumo dos pontos principais
 - Conexões com tópicos futuros
 - Sugestões de leitura complementar
+- REFERÊNCIAS: Links do conteúdo original
 
 PLANO DA AULA:
 {{LESSON_PLAN}}
@@ -174,7 +196,7 @@ RESPONDA EM PORTUGUÊS DO BRASIL.
 Comece diretamente com o título da aula (# Aula: ...) sem preâmbulos.
 `,
 
-    computing: `
+  computing: `
 Você é um professor universitário ministrando uma aula de Ciência da Computação/Algoritmos.
 Gere o conteúdo COMPLETO da aula seguindo EXATAMENTE o plano fornecido.
 
@@ -186,6 +208,8 @@ INSTRUÇÕES CRÍTICAS:
 5. Use LaTeX para expressões matemáticas e notação assintótica
 6. Use blocos de código markdown para pseudocódigo e exemplos
 7. Inclua traces de execução quando demonstrar algoritmos
+8. Se houver LINKS no conteúdo original, INCLUA-OS na seção de referências
+9. Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes), inclua com explicações
 
 ESTRUTURA OBRIGATÓRIA PARA CADA SEÇÃO:
 
@@ -206,10 +230,16 @@ PARA SEÇÕES TEÓRICAS (explanation):
 - Invariantes de laço ou propriedades estruturais.
 - Comparação com alternativas quando relevante.
 
+PARA INFRAESTRUTURA COMO CÓDIGO (se aplicável):
+- Inclua exemplos de Terraform, CloudFormation, Kubernetes do conteúdo original
+- Explique cada bloco de configuração
+- Destaque boas práticas
+
 PARA CONCLUSÃO (conclusion):
 - Resumo dos pontos principais e complexidades.
 - Variantes e otimizações possíveis.
 - Conexões com outros algoritmos/estruturas.
+- REFERÊNCIAS: Links do conteúdo original
 
 PLANO DA AULA:
 {{LESSON_PLAN}}
@@ -221,9 +251,15 @@ RESPONDA EM PORTUGUÊS DO BRASIL.
 Comece diretamente com o título da aula (# Aula: ...) sem preâmbulos.
 `,
 
-    'data-engineering': `
+  'data-engineering': `
 Você é um instrutor especialista ministrando uma aula de Engenharia de Dados.
 Gere o conteúdo em Markdown detalhado.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL fornecido como base
+- Se houver LINKS no conteúdo original, INCLUA-OS na seção de referências
+- Se houver código (Python, Scala, SQL), inclua exemplos práticos
+- Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes, Docker), INCLUA OBRIGATORIAMENTE com explicações detalhadas
 
 Foque em:
 - Arquitetura de Sistemas de Dados.
@@ -231,15 +267,30 @@ Foque em:
 - Otimização e Escalabilidade.
 - Exemplos do mundo real (ex: "Como Netflix processa logs").
 
+INCLUA SEÇÃO DE INFRAESTRUTURA (se aplicável):
+## Infraestrutura como Código
+
+\`\`\`terraform
+[Exemplos Terraform do conteúdo original]
+\`\`\`
+
+\`\`\`yaml
+[Exemplos CloudFormation/Kubernetes do conteúdo original]
+\`\`\`
+
+INCLUA SEÇÃO DE REFERÊNCIAS:
+## Referências
+[Links do conteúdo original]
+
 Use diagramas Mermaid se ajudar a explicar fluxos.
 `
 };
 
 // Helper functions
 export function getLessonPlanPrompt(mode: SubjectMode): string {
-    return LESSON_PLAN_PROMPTS[mode];
+  return LESSON_PLAN_PROMPTS[mode];
 }
 
 export function getLessonContentPrompt(mode: SubjectMode): string {
-    return LESSON_CONTENT_PROMPTS[mode];
+  return LESSON_CONTENT_PROMPTS[mode];
 }

@@ -9,6 +9,12 @@ export const INTERVIEW_QUESTIONS_PROMPT = `
 Você é um entrevistador técnico sênior de uma empresa de tecnologia de elite (FAANG).
 Sua tarefa é gerar questões de entrevista técnica CONCEITUAL baseadas no conteúdo da nota de estudo.
 
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL como base para as questões
+- Se houver LINKS no conteúdo, use-os como referência para questões mais profundas
+- Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes), crie questões sobre boas práticas e arquitetura
+- Se houver código Python/Scala/SQL, crie questões sobre implementação e otimização
+
 CONTEXTO:
 O Interview Mode é diferente do Challenge Mode:
 - Challenge Mode: Design de sistemas ou código (System Design / LLD)
@@ -28,6 +34,7 @@ REGRAS PARA GERAÇÃO DE QUESTÕES:
    - networking: TCP/IP, DNS, TLS, HTTP
    - languages_runtimes: GC, JVM, V8, memória
    - os_fundamentals: processos, memória virtual, syscalls
+   - infrastructure_as_code: Terraform, CloudFormation, Kubernetes, Docker
 5. Defina dificuldade: senior, staff, ou principal
 6. Liste os tópicos esperados na resposta ideal
 
@@ -36,6 +43,7 @@ EXEMPLOS DE QUESTÕES PROFUNDAS:
 - "Explique o funcionamento do G1 Garbage Collector da JVM"
 - "O que acontece quando você digita uma URL no navegador?"
 - "Por que o Python é considerado single-threaded mesmo tendo threading?"
+- "Como o Terraform gerencia estado e quais são os riscos de state drift?"
 
 FORMATO (JSON válido):
 {
@@ -186,77 +194,77 @@ FORMATO (JSON):
 // Helper functions for Interview Mode
 
 export function getInterviewQuestionsPrompt(noteContent: string, noteName: string): string {
-    return INTERVIEW_QUESTIONS_PROMPT
-        .replace('{{NOTE_CONTENT}}', noteContent)
-        .replace('{{NOTE_NAME}}', noteName);
+  return INTERVIEW_QUESTIONS_PROMPT
+    .replace('{{NOTE_CONTENT}}', noteContent)
+    .replace('{{NOTE_NAME}}', noteName);
 }
 
 export function getInterviewFollowUpPrompt(
-    question: InterviewQuestion,
-    researchContent: string,
-    noteContent: string,
-    dialogHistory: string
+  question: InterviewQuestion,
+  researchContent: string,
+  noteContent: string,
+  dialogHistory: string
 ): string {
-    const categoryLabels: Record<string, string> = {
-        'database_internals': 'Internals de Banco de Dados',
-        'concurrency': 'Concorrência e Multithreading',
-        'distributed_systems': 'Sistemas Distribuídos',
-        'networking': 'Redes e Protocolos',
-        'languages_runtimes': 'Linguagens e Runtimes',
-        'os_fundamentals': 'Fundamentos de SO'
-    };
+  const categoryLabels: Record<string, string> = {
+    'database_internals': 'Internals de Banco de Dados',
+    'concurrency': 'Concorrência e Multithreading',
+    'distributed_systems': 'Sistemas Distribuídos',
+    'networking': 'Redes e Protocolos',
+    'languages_runtimes': 'Linguagens e Runtimes',
+    'os_fundamentals': 'Fundamentos de SO'
+  };
 
-    return INTERVIEW_FOLLOW_UP_PROMPT
-        .replace('{{QUESTION_NUMBER}}', question.number.toString())
-        .replace('{{CATEGORY}}', categoryLabels[question.category] || question.category)
-        .replace('{{DIFFICULTY}}', question.difficulty.toUpperCase())
-        .replace('{{QUESTION}}', question.question)
-        .replace('{{RESEARCH_CONTENT}}', researchContent)
-        .replace('{{NOTE_CONTENT}}', noteContent)
-        .replace('{{DIALOG_HISTORY}}', dialogHistory);
+  return INTERVIEW_FOLLOW_UP_PROMPT
+    .replace('{{QUESTION_NUMBER}}', question.number.toString())
+    .replace('{{CATEGORY}}', categoryLabels[question.category] || question.category)
+    .replace('{{DIFFICULTY}}', question.difficulty.toUpperCase())
+    .replace('{{QUESTION}}', question.question)
+    .replace('{{RESEARCH_CONTENT}}', researchContent)
+    .replace('{{NOTE_CONTENT}}', noteContent)
+    .replace('{{DIALOG_HISTORY}}', dialogHistory);
 }
 
 export function getInterviewEvaluationPrompt(
-    question: InterviewQuestion,
-    candidateResponse: string,
-    dialogHistory: string,
-    researchContent: string
+  question: InterviewQuestion,
+  candidateResponse: string,
+  dialogHistory: string,
+  researchContent: string
 ): string {
-    const categoryLabels: Record<string, string> = {
-        'database_internals': 'Internals de Banco de Dados',
-        'concurrency': 'Concorrência e Multithreading',
-        'distributed_systems': 'Sistemas Distribuídos',
-        'networking': 'Redes e Protocolos',
-        'languages_runtimes': 'Linguagens e Runtimes',
-        'os_fundamentals': 'Fundamentos de SO'
-    };
+  const categoryLabels: Record<string, string> = {
+    'database_internals': 'Internals de Banco de Dados',
+    'concurrency': 'Concorrência e Multithreading',
+    'distributed_systems': 'Sistemas Distribuídos',
+    'networking': 'Redes e Protocolos',
+    'languages_runtimes': 'Linguagens e Runtimes',
+    'os_fundamentals': 'Fundamentos de SO'
+  };
 
-    return INTERVIEW_EVALUATION_PROMPT
-        .replace('{{CATEGORY}}', categoryLabels[question.category] || question.category)
-        .replace('{{DIFFICULTY}}', question.difficulty.toUpperCase())
-        .replace('{{QUESTION}}', question.question)
-        .replace('{{EXPECTED_TOPICS}}', question.expectedTopics.join(', '))
-        .replace('{{CANDIDATE_RESPONSE}}', candidateResponse)
-        .replace('{{DIALOG_HISTORY}}', dialogHistory)
-        .replace('{{RESEARCH_CONTENT}}', researchContent);
+  return INTERVIEW_EVALUATION_PROMPT
+    .replace('{{CATEGORY}}', categoryLabels[question.category] || question.category)
+    .replace('{{DIFFICULTY}}', question.difficulty.toUpperCase())
+    .replace('{{QUESTION}}', question.question)
+    .replace('{{EXPECTED_TOPICS}}', question.expectedTopics.join(', '))
+    .replace('{{CANDIDATE_RESPONSE}}', candidateResponse)
+    .replace('{{DIALOG_HISTORY}}', dialogHistory)
+    .replace('{{RESEARCH_CONTENT}}', researchContent);
 }
 
 export function getInterviewFinalVerdictPrompt(
-    questions: InterviewQuestion[],
-    researchContent: string
+  questions: InterviewQuestion[],
+  researchContent: string
 ): string {
-    const questionsSummary = questions.map(q => {
-        let summary = `### Questão ${q.number}: ${q.question}\n`;
-        summary += `Categoria: ${q.category}, Dificuldade: ${q.difficulty}\n`;
-        if (q.evaluation) {
-            summary += `Avaliação: ${q.evaluation.score}\n`;
-            summary += `Dimensões: Profundidade=${q.evaluation.dimensions.depth}, Trade-offs=${q.evaluation.dimensions.tradeoffs}, Comunicação=${q.evaluation.dimensions.communication}\n`;
-            summary += `Feedback: ${q.evaluation.feedback}\n`;
-        }
-        return summary;
-    }).join('\n---\n');
+  const questionsSummary = questions.map(q => {
+    let summary = `### Questão ${q.number}: ${q.question}\n`;
+    summary += `Categoria: ${q.category}, Dificuldade: ${q.difficulty}\n`;
+    if (q.evaluation) {
+      summary += `Avaliação: ${q.evaluation.score}\n`;
+      summary += `Dimensões: Profundidade=${q.evaluation.dimensions.depth}, Trade-offs=${q.evaluation.dimensions.tradeoffs}, Comunicação=${q.evaluation.dimensions.communication}\n`;
+      summary += `Feedback: ${q.evaluation.feedback}\n`;
+    }
+    return summary;
+  }).join('\n---\n');
 
-    return INTERVIEW_FINAL_VERDICT_PROMPT
-        .replace('{{QUESTIONS_SUMMARY}}', questionsSummary)
-        .replace('{{RESEARCH_CONTENT}}', researchContent);
+  return INTERVIEW_FINAL_VERDICT_PROMPT
+    .replace('{{QUESTIONS_SUMMARY}}', questionsSummary)
+    .replace('{{RESEARCH_CONTENT}}', researchContent);
 }

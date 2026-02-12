@@ -6,19 +6,12 @@ import {
     getInterviewFollowUpPrompt,
     getInterviewFinalVerdictPrompt
 } from "./prompts";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || '';
-
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-};
-
-const MODEL_ID = "gemini-3-flash-preview";
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
 // Research content from both research files for interview context
 const INTERVIEW_RESEARCH_CONTENT = `
@@ -103,7 +96,7 @@ export const generateInterviewQuestions = async (
         }
 
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7,
@@ -209,7 +202,7 @@ export const getInterviewerResponse = async (
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts }],
             config: { temperature: 0.7 }
         });
@@ -247,7 +240,7 @@ export const evaluateCandidateResponse = async (
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: prompt,
             config: {
                 temperature: 0.5,
@@ -292,7 +285,7 @@ export const generateFinalVerdict = async (
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: prompt,
             config: {
                 temperature: 0.5,
@@ -383,7 +376,7 @@ Responda em português brasileiro.`;
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts }],
             config: { temperature: 0.6 }
         });

@@ -6,9 +6,14 @@
 import { SubjectMode } from '../../types';
 
 export const EXERCISE_GENERATION_PROMPTS: Record<SubjectMode, string> = {
-    mathematics: `
+  mathematics: `
 Você é um professor de matemática experiente criando uma lista de exercícios para um workbook.
 Seu objetivo é gerar exercícios DIRETOS e PRÁTICOS que exercitem os conceitos do material fornecido.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL como fonte para os exercícios
+- Se houver LINKS no conteúdo, NOTE-OS para inclusão nas referências
+- Se houver código Python no conteúdo, crie exercícios que envolvam implementação
 
 REGRAS IMPORTANTES:
 1. Gere entre 15 e 20 exercícios
@@ -38,7 +43,7 @@ MATERIAL DE REFERÊNCIA:
 Gere a lista de exercícios em JSON válido:
 `,
 
-    computing: `
+  computing: `
 Você é um especialista em criação de questões de certificação estilo AWS para Engenharia de Software.
 Sua tarefa é gerar questões de múltipla escolha seguindo EXATAMENTE a metodologia de design de exames AWS.
 
@@ -107,6 +112,8 @@ Cada questão DEVE conter os seguintes componentes:
 5. Use terminologia técnica: Factory, Strategy, Repository, Adapter, Facade, etc
 6. Inclua cenários de: Refatoração, Novo Design, Code Review, Extensibilidade
 7. Questões devem medir DECISÃO DE DESIGN, não sintaxe de código
+8. Se houver LINKS no conteúdo original, inclua-os como referências nas questões
+9. Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes), crie questões sobre boas práticas
 
 ## FORMATO DE SAÍDA (JSON)
 
@@ -179,7 +186,7 @@ MATERIAL DE REFERÊNCIA (extraia conceitos para criar questões):
 Gere a lista de questões estilo AWS em JSON válido:
 `,
 
-    'data-engineering': `
+  'data-engineering': `
 Você é um especialista em criação de questões de certificação estilo AWS para Engenharia de Dados.
 Sua tarefa é gerar questões de múltipla escolha seguindo EXATAMENTE a metodologia de design de exames AWS.
 
@@ -238,6 +245,9 @@ Cada questão DEVE conter os seguintes componentes:
 5. Use nomes de serviços reais: Kafka, Spark, Flink, Airflow, dbt, Delta Lake, Iceberg, Parquet, Avro, etc
 6. Inclua cenários de: Ingestão, Processamento, Storage, Orquestração, Qualidade, Schema Evolution, Idempotência
 7. Questões devem medir DECISÃO DE ARQUITETURA, não decoreba
+8. Se houver LINKS no conteúdo original, inclua-os como referências nas questões
+9. Se houver código de INFRAESTRUTURA (Terraform, CloudFormation, Kubernetes, Docker), crie questões sobre boas práticas
+10. Se houver código Python/Scala/SQL, crie questões sobre implementação e otimização
 
 ## FORMATO DE SAÍDA (JSON)
 
@@ -312,9 +322,13 @@ Gere a lista de questões estilo AWS em JSON válido:
 };
 
 export const SOLUTION_GENERATION_PROMPTS: Record<SubjectMode, string> = {
-    mathematics: `
+  mathematics: `
 Você é um professor de matemática criando uma solução passo a passo.
 Explique de forma clara e didática, como se estivesse escrevendo em um gabarito de livro.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL como referência
+- Se houver LINKS no conteúdo, inclua-os como referências adicionais
 
 REGRAS:
 1. Divida a solução em passos claros e numerados
@@ -347,7 +361,7 @@ CONTEXTO DO MATERIAL (se relevante):
 Forneça a solução passo a passo:
 `,
 
-    computing: `
+  computing: `
 Você é um avaliador de certificação de Engenharia de Software explicando o gabarito de uma questão estilo AWS.
 Sua tarefa é fornecer uma explicação DETALHADA de cada alternativa, seguindo o padrão de explicações oficiais.
 
@@ -420,6 +434,12 @@ Sua tarefa é fornecer uma explicação DETALHADA de cada alternativa, seguindo 
 
 ---
 
+### 🔗 Referências (se houver links no conteúdo original)
+
+[Links do conteúdo original relacionados ao tópico]
+
+---
+
 EXERCÍCIO:
 {{EXERCISE_STATEMENT}}
 
@@ -434,7 +454,7 @@ CONTEXTO DO MATERIAL (se relevante):
 Forneça o gabarito completo no formato acima:
 `,
 
-    'data-engineering': `
+  'data-engineering': `
 Você é um avaliador de certificação de Engenharia de Dados explicando o gabarito de uma questão estilo AWS.
 Sua tarefa é fornecer uma explicação DETALHADA de cada alternativa, seguindo o padrão de explicações oficiais.
 
@@ -500,6 +520,12 @@ Sua tarefa é fornecer uma explicação DETALHADA de cada alternativa, seguindo 
 
 ---
 
+### 🔗 Referências (se houver links no conteúdo original)
+
+[Links do conteúdo original relacionados ao tópico]
+
+---
+
 EXERCÍCIO:
 {{EXERCISE_STATEMENT}}
 
@@ -517,9 +543,9 @@ Forneça o gabarito completo no formato acima:
 
 // Helper functions
 export function getExerciseGenerationPrompt(mode: SubjectMode): string {
-    return EXERCISE_GENERATION_PROMPTS[mode];
+  return EXERCISE_GENERATION_PROMPTS[mode];
 }
 
 export function getSolutionGenerationPrompt(mode: SubjectMode): string {
-    return SOLUTION_GENERATION_PROMPTS[mode];
+  return SOLUTION_GENERATION_PROMPTS[mode];
 }

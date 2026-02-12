@@ -20,7 +20,6 @@ interface StudyModesMenuProps {
     onStartWorkbook?: () => void;
     onStartChallenge?: () => void;
     onStartInterview?: () => void;
-    onStartInterview?: () => void;
     onStartPairProgramming?: () => void;
     onStartConceptExtraction?: () => void;
     mode: SubjectMode;

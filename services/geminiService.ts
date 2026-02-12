@@ -1,17 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, SubjectMode } from "../types";
 import { } from "./prompts";
+import { getActiveApiKey, getSelectedModel, getClient, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || ''; // In a real app, ensure this is handled securely
-
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-  if (!client && apiKey) {
-    client = new GoogleGenAI({ apiKey });
-  }
-  return client;
-};
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+  resetClient();
+});
 
 export const streamGeminiResponse = async (
   prompt: string,
@@ -26,7 +21,7 @@ export const streamGeminiResponse = async (
     return;
   }
 
-  const modelId = "gemini-3-flash-preview";
+  const modelId = getSelectedModel();
 
   const historyText = history.length > 0
     ? history.map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.text}`).join('\n\n')

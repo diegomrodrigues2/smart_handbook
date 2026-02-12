@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import Mermaid from './Mermaid';
 import { ChatMessage } from '../types';
 import { streamGeminiResponse } from '../services/geminiService';
 import { useSubjectMode } from '../hooks';
@@ -10,9 +13,19 @@ interface ChatInterfaceProps {
   currentContext: string;
   isOpen: boolean;
   onClose: () => void;
+  width?: number;
+  isResizing?: boolean;
+  onStartResizing?: (e: React.MouseEvent) => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, onClose }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  currentContext,
+  isOpen,
+  onClose,
+  width = 400,
+  isResizing = false,
+  onStartResizing
+}) => {
   const { mode, isMathMode } = useSubjectMode();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -82,7 +95,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, o
   if (!isOpen) return null;
 
   return (
-    <div className="w-[400px] h-full bg-white border-l border-gray-200 flex flex-col shadow-xl z-10 absolute right-0 top-0 lg:relative lg:shadow-none">
+    <div
+      className="h-full bg-white flex flex-col shadow-xl z-10 absolute right-0 top-0 lg:relative lg:shadow-none"
+      style={{ width: `${width}px` }}
+    >
+      {/* Resize Handle */}
+      {onStartResizing && (
+        <div
+          className={`absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400 transition-colors ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
+          onMouseDown={onStartResizing}
+          title="Arrastar para redimensionar"
+        />
+      )}
+
       {/* Header */}
       <div className="h-12 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50">
         <div className="flex items-center gap-2">
@@ -130,7 +155,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentContext, isOpen, o
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
-                  p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />
+                  p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                  code: ({ node, className, children, ...props }: any) => {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const language = match ? match[1] : '';
+                    const codeString = String(children).replace(/\n$/, '');
+                    const isBlock = className || codeString.includes('\n');
+
+                    // Render Mermaid diagrams
+                    if (isBlock && language === 'mermaid') {
+                      return <Mermaid chart={codeString} />;
+                    }
+
+                    return !isBlock ? (
+                      <code className="bg-gray-100 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs border border-gray-200" {...props}>
+                        {children}
+                      </code>
+                    ) : (
+                      <div className="my-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                        {language && (
+                          <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 text-xs font-mono text-gray-500 flex items-center gap-2">
+                            <i className="fa-solid fa-code text-gray-400"></i>
+                            {language}
+                          </div>
+                        )}
+                        <SyntaxHighlighter
+                          style={github}
+                          language={language || 'text'}
+                          PreTag="div"
+                          customStyle={{
+                            margin: 0,
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            lineHeight: '1.4',
+                            background: '#f6f8fa',
+                            borderRadius: 0,
+                          }}
+                          codeTagProps={{
+                            style: {
+                              fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+                            }
+                          }}
+                          {...props}
+                        >
+                          {codeString}
+                        </SyntaxHighlighter>
+                      </div>
+                    );
+                  }
                 }}
               >
                 {msg.text}

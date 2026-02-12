@@ -1,16 +1,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { SubjectMode, Concept } from '../../types';
+import { SubjectMode, Concept, ConceptSuggestion } from '../../types';
 import { extractConcepts, generateConceptDefinition, saveDefinitionFile } from '../../services/extractionService';
+import { saveNoteMetadata } from '../../services/noteMetadataService';
 
 interface ConceptExtractionModeProps {
     noteContent: string;
     noteName: string;
     noteId: string;
+    tabId?: string;
     mode: SubjectMode;
     directoryHandle: FileSystemDirectoryHandle | null;
     onClose: () => void;
     pdfData?: ArrayBuffer;
+}
+
+// Extended concept type with per-concept suggestions
+interface ConceptWithSuggestions extends Concept {
+    suggestions: ConceptSuggestion[];
 }
 
 const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
@@ -22,7 +29,7 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
     onClose,
     pdfData
 }) => {
-    const [concepts, setConcepts] = useState<Concept[]>([]);
+    const [concepts, setConcepts] = useState<ConceptWithSuggestions[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const hasFetched = useRef(false);
@@ -36,9 +43,9 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
             setIsLoading(true);
             setError(null);
             try {
-                const extracted = await extractConcepts(noteContent, mode, pdfData);
-                if (extracted) {
-                    setConcepts(extracted);
+                const result = await extractConcepts(noteContent, mode, pdfData);
+                if (result) {
+                    setConcepts(result.concepts as ConceptWithSuggestions[]);
                 } else {
                     setError("Falha ao extrair conceitos. Tente novamente.");
                 }
@@ -52,21 +59,38 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
         fetchConcepts();
     }, [noteContent, mode, pdfData]);
 
-    const handleGenerateDefinition = async (concept: Concept) => {
-        // Allow multiple concurrent generations - only check if already generating THIS concept
+    const handleGenerateDefinition = async (concept: ConceptWithSuggestions) => {
         if (concept.status === 'generating' || concept.status === 'completed' || !directoryHandle) return;
 
         try {
-            // update status
             setConcepts(prev => prev.map(c => c.id === concept.id ? { ...c, status: 'generating' } : c));
 
             // 1. Generate content
             const content = await generateConceptDefinition(concept, noteContent, mode, pdfData);
 
-            // 2. Save file
+            // 2. Save definition file
             const saved = await saveDefinitionFile(directoryHandle, noteId, concept.fileName, content);
 
-            // update status
+            // 3. Save metadata with per-concept suggestions and source reference
+            if (saved) {
+                const parts = noteId.split('/');
+                parts.pop(); // Remove source filename
+                const pathSegments = parts.slice(0);
+                if (pathSegments.length > 1) {
+                    pathSegments.pop(); // Go up one level (past pesquisas, etc.)
+                }
+                pathSegments.push('definicoes');
+                pathSegments.push(concept.fileName);
+                const definitionNoteId = pathSegments.join('/');
+
+                await saveNoteMetadata(directoryHandle, definitionNoteId, {
+                    sourceFile: noteId,
+                    sourceType: pdfData ? 'pdf' : 'md',
+                    suggestions: concept.suggestions,
+                    createdAt: new Date().toISOString()
+                });
+            }
+
             setConcepts(prev => prev.map(c =>
                 c.id === concept.id ? { ...c, status: saved ? 'completed' : 'error' } : c
             ));
@@ -75,7 +99,6 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
             console.error(err);
             setConcepts(prev => prev.map(c => c.id === concept.id ? { ...c, status: 'error' } : c));
         }
-
     };
 
     return (
@@ -122,13 +145,13 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
                                     key={concept.id}
                                     onClick={() => concept.status !== 'completed' && concept.status !== 'generating' && handleGenerateDefinition(concept)}
                                     className={`
-                    bg-white rounded-xl border p-5 transition-all cursor-pointer relative group overflow-hidden
-                    ${concept.status === 'completed'
+                                        bg-white rounded-xl border p-5 transition-all cursor-pointer relative group overflow-hidden
+                                        ${concept.status === 'completed'
                                             ? 'border-green-200 bg-green-50/30'
                                             : 'border-gray-200 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
                                         }
-                    ${concept.status === 'generating' ? 'border-indigo-300 ring-2 ring-indigo-100' : ''}
-                  `}
+                                        ${concept.status === 'generating' ? 'border-indigo-300 ring-2 ring-indigo-100' : ''}
+                                    `}
                                 >
                                     {/* Status Indicator */}
                                     <div className="absolute top-4 right-4">
@@ -153,6 +176,22 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
                                     <p className="text-sm text-gray-600 mt-2 leading-relaxed">
                                         {concept.shortDefinition}
                                     </p>
+
+                                    {/* Per-concept suggestions preview */}
+                                    {concept.suggestions && concept.suggestions.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-1">
+                                            {concept.suggestions.slice(0, 3).map(s => (
+                                                <span key={s.id} className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full">
+                                                    {s.title}
+                                                </span>
+                                            ))}
+                                            {concept.suggestions.length > 3 && (
+                                                <span className="text-[10px] px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">
+                                                    +{concept.suggestions.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
                                         <span className="text-xs text-gray-400 font-mono">
@@ -181,14 +220,14 @@ const ConceptExtractionMode: React.FC<ConceptExtractionModeProps> = ({
             </div>
 
             <style>{`
-        @keyframes progress {
-            0% { width: 0% }
-            100% { width: 100% }
-        }
-        .animate-progress {
-            animation: progress 15s linear infinite; /* Fake progress for long generation */
-        }
-      `}</style>
+                @keyframes progress {
+                    0% { width: 0% }
+                    100% { width: 100% }
+                }
+                .animate-progress {
+                    animation: progress 15s linear infinite;
+                }
+            `}</style>
         </div>
     );
 };

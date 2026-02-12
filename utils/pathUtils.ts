@@ -38,8 +38,20 @@ export const cleanSourcePath = (src: string): string => {
 };
 
 /**
- * Build full path from directory and relative source
+ * Build full path from directory and relative source, resolving '..' and '.'
  */
 export const buildFullPath = (currentDir: string, cleanSrc: string): string => {
-    return currentDir ? `${currentDir}/${cleanSrc}` : cleanSrc;
+    const combined = currentDir ? `${currentDir}/${cleanSrc}` : cleanSrc;
+    const parts = combined.split(/[\\/]/);
+    const result: string[] = [];
+
+    for (const part of parts) {
+        if (part === '..') {
+            result.pop();
+        } else if (part !== '.' && part !== '') {
+            result.push(part);
+        }
+    }
+
+    return result.join('/');
 };

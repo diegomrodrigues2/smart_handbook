@@ -2,19 +2,12 @@ import { GoogleGenAI } from "@google/genai";
 import { LessonPlan, LessonSection, SubjectMode } from "../types";
 import { getLessonPlanPrompt, getLessonContentPrompt } from "./prompts";
 import { arrayBufferToBase64 } from "./pdfContentService";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || '';
-
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-};
-
-const MODEL_ID = "gemini-3-flash-preview";
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
 /**
  * Creates content parts for API call, supporting both text and PDF
@@ -160,7 +153,7 @@ export const generateLessonPlan = async (
         const contentParts = createContentParts(prompt, noteContent, pdfData);
 
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.4,
@@ -240,7 +233,7 @@ export const generateLessonContent = async (
 
     try {
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: { temperature: 0.7 }
         });
@@ -300,7 +293,7 @@ Retorne o plano revisado no mesmo formato JSON.
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: prompt,
             config: {
                 temperature: 0.4,

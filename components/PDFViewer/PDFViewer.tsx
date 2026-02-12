@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import StudyModesMenu from '../StudyModesMenu';
+import ProjectModesMenu from '../ProjectModesMenu';
 import AudioPlayer from '../AudioPlayer';
 import { generateAudioFromPDF, createAudioBlobUrl } from '../../services/audioService';
 import { SubjectMode } from '../../types';
@@ -28,6 +29,7 @@ interface PDFViewerProps {
     onStartInterview?: () => void;
     onStartPairProgramming?: () => void;
     onStartConceptExtraction?: () => void;
+    onStartProjectSpec?: (specType: import('../../types').ProjectSpecType) => void;
 }
 
 const PDFViewer: React.FC<PDFViewerProps> = ({
@@ -42,7 +44,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
     onStartChallenge,
     onStartInterview,
     onStartPairProgramming,
-    onStartConceptExtraction
+    onStartConceptExtraction,
+    onStartProjectSpec
 }) => {
     const [numPages, setNumPages] = useState<number>(0);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -116,24 +119,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
     };
 
     return (
-        <div className="h-full flex flex-col bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-            {/* Header com controles */}
-            <div className="flex items-center bg-gray-50 border-b border-gray-200 px-4 h-12 select-none">
-                {/* Tab do arquivo */}
-                <div className="flex items-center px-3 py-1 bg-white border border-gray-200 border-b-white rounded-t-md text-sm text-gray-700 font-medium translate-y-[1px] shadow-sm max-w-[300px]">
-                    <span className="mr-2 flex-shrink-0">
-                        <i className="fa-solid fa-file-pdf text-red-500"></i>
-                    </span>
-                    <span className="truncate" title={fileName}>{fileName}</span>
-                    <button
-                        onClick={onClose}
-                        className="ml-3 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                    >
-                        <i className="fa-solid fa-xmark text-xs"></i>
-                    </button>
-                </div>
-
-                <div className="flex-1"></div>
+        <div className="h-full flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden">
+            {/* Toolbar */}
+            <div className="flex items-center justify-end bg-gray-50 border-b border-gray-200 px-4 h-12 select-none gap-2">
 
                 {/* Audio Explanation Button */}
                 <button
@@ -164,6 +152,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                     onStartInterview={onStartInterview}
                     onStartPairProgramming={onStartPairProgramming}
                     onStartConceptExtraction={onStartConceptExtraction}
+                    mode={mode}
+                />
+
+                {/* Project Modes Menu */}
+                <ProjectModesMenu
+                    onStartProjectSpec={onStartProjectSpec}
                     mode={mode}
                 />
 

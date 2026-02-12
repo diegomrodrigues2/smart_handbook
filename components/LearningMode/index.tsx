@@ -21,6 +21,7 @@ interface LearningModeProps {
     noteContent: string;
     noteName: string;
     noteId: string;
+    tabId?: string;
     directoryHandle?: FileSystemDirectoryHandle | null;
     onClose: () => void;
     pdfData?: ArrayBuffer | null;

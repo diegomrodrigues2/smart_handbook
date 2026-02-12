@@ -63,6 +63,35 @@ export const filterNodesByQuery = (nodes: FileNode[], query: string): FileNode[]
 };
 
 /**
+ * Filter nodes by favorites
+ */
+export const filterNodesByFavorites = (nodes: FileNode[], favorites: Set<string>): FileNode[] => {
+    if (favorites.size === 0) return [];
+
+    const filterNodes = (nodes: FileNode[]): FileNode[] => {
+        return nodes.reduce<FileNode[]>((acc, node) => {
+            if (node.type === 'file') {
+                if (favorites.has(node.id)) {
+                    acc.push(node);
+                }
+            } else if (node.type === 'folder' && node.children) {
+                const filteredChildren = filterNodes(node.children);
+                if (filteredChildren.length > 0) {
+                    acc.push({
+                        ...node,
+                        children: filteredChildren,
+                        isOpen: true
+                    });
+                }
+            }
+            return acc;
+        }, []);
+    };
+
+    return filterNodes(nodes);
+};
+
+/**
  * Update a specific node in the tree (immutable)
  */
 export const updateNodeById = <T extends Partial<FileNode>>(

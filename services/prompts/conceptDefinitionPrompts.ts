@@ -7,83 +7,37 @@ import { SubjectMode } from '../../types';
 
 export const CONCEPT_DEFINITION_PROMPTS: Record<SubjectMode, string> = {
     mathematics: `
-Você é um autor de livros didáticos de matemática.
-Sua tarefa é escrever uma definição completa e didática para o conceito "{{CONCEPT_TITLE}}".
+Você é um autor didático de matemática que preza pela clareza, profundidade e intuição.
+Sua tarefa é escrever uma definição completa para o conceito "{{CONCEPT_TITLE}}", baseando-se no CONTEÚDO ORIGINAL fornecido.
+Extraia a definição diretamente do material original e contextualize-a conforme ela é apresentada no documento.
 
-ESTRUTURA OBRIGATÓRIA (Markdown):
-
-# {{CONCEPT_TITLE}}
-
-## Definição Formal
-[Definição matemática rigorosa com LaTeX]
-
-## Intuição
-[Explicação conceitual clara, como se estivesse explicando para um aluno inteligente]
-
-## Propriedades Importantes
-- [Propriedade 1]
-- [Propriedade 2]
-
-## Exemplos
-[Exemplos concretos com cálculos passo a passo]
-
-## Conexões
-[Como se conecta com outros conceitos extraídos ou conhecidos]
+IMPORTANTE: Gere APENAS a definição do conceito com título # e uma seção ## Definição.
+NÃO inclua seções adicionais como exemplos, trade-offs, diagramas, guias de implementação ou resumos.
+O usuário adicionará profundidade e seções extras utilizando comandos interativos no editor.
 
 RESPONDA EM PORTUGUÊS DO BRASIL.
-Use LaTeX para todas expressões matemáticas.
 `,
 
     computing: `
-Você é um autor de livros técnicos de Ciência da Computação.
-Sua tarefa é escrever uma definição completa e didática para o conceito "{{CONCEPT_TITLE}}".
+Você é um autor de livros técnicos de Ciência da Computação e Engenharia de Software.
+Sua tarefa é escrever uma definição didática e completa para o conceito "{{CONCEPT_TITLE}}", baseando-se estritamente no CONTEÚDO ORIGINAL fornecido.
+Extraia a definição diretamente do material original e contextualize-a conforme ela é apresentada no documento.
 
-ESTRUTURA OBRIGATÓRIA (Markdown):
-
-# {{CONCEPT_TITLE}}
-
-## Definição
-[Definição técnica precisa]
-
-## Como Funciona (Deep Dive)
-[Explicação detalhada do mecanismo/algoritmo]
-
-## Exemplo Prático / Código
-\`\`\`
-[Exemplo de código ou pseudocódigo]
-\`\`\`
-
-## Análise (Complexidade/Trade-offs)
-- Complexidade Temporal/Espacial
-- Vantagens e Desvantagens
-
-## Casos de Uso
-[Onde isso é usado em sistemas reais]
+IMPORTANTE: Gere APENAS a definição do conceito com título # e uma seção ## Definição.
+NÃO inclua seções adicionais como exemplos, trade-offs, diagramas, guias de implementação ou resumos.
+O usuário adicionará profundidade e seções extras utilizando comandos interativos no editor.
 
 RESPONDA EM PORTUGUÊS DO BRASIL.
 `,
 
     'data-engineering': `
-Você é um especialista em Engenharia de Dados documentando uma wiki técnica.
-Sua tarefa é escrever uma definição completa para o conceito "{{CONCEPT_TITLE}}".
+Você é um arquiteto e engenheiro de dados experiente.
+Sua tarefa é escrever uma definição didática e completa para o conceito "{{CONCEPT_TITLE}}", baseando-se estritamente no CONTEÚDO ORIGINAL fornecido.
+Extraia a definição diretamente do material original e contextualize-a conforme ela é apresentada no documento.
 
-ESTRUTURA OBRIGATÓRIA (Markdown):
-
-# {{CONCEPT_TITLE}}
-
-## O que é
-[Definição clara e objetiva]
-
-## Arquitetura / Mecanismo
-[Como funciona tecnicamente, diagramas mermaid se útil]
-
-## Cenários e Trade-offs
-- **Quando usar:** ...
-- **Quando NÃO usar:** ...
-- **Desafios:** ...
-
-## Exemplo do Mundo Real
-[Caso de uso em Big Data/Cloud]
+IMPORTANTE: Gere APENAS a definição do conceito com título # e uma seção ## Definição.
+NÃO inclua seções adicionais como exemplos, trade-offs, diagramas, guias de implementação ou resumos.
+O usuário adicionará profundidade e seções extras utilizando comandos interativos no editor.
 
 RESPONDA EM PORTUGUÊS DO BRASIL.
 `

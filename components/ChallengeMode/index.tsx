@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Challenge, ChallengeSession, ChallengeMessage } from '../../types';
 import { startChallengeSession, getInterviewResponse, requestHint, generateSolution, summarizeInterview, generateCustomChallenge } from '../../services/challengeService';
 import { RESEARCH_CONTENT } from '../../services/researchService';
@@ -7,11 +7,13 @@ import MessageList from './MessageList';
 import ChallengeSelection from './ChallengeSelection';
 import ChallengeDetail from './ChallengeDetail';
 import { useSubjectMode } from '../../hooks/useSubjectMode';
+import ExcalidrawWrapper, { ExcalidrawWrapperRef, ExcalidrawSceneData } from './ExcalidrawWrapper';
 
 interface ChallengeModeProps {
     noteContent: string;
     noteName: string;
     noteId: string;
+    tabId?: string; // Optional - kept for compatibility
     directoryHandle?: FileSystemDirectoryHandle | null;
     onClose: () => void;
     pdfData?: ArrayBuffer | null;
@@ -40,11 +42,13 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
     noteContent,
     noteName,
     noteId,
+    tabId,
     directoryHandle,
     onClose,
     pdfData
 }) => {
     const { mode } = useSubjectMode();
+
     const [session, setSession] = useState<ChallengeSession | null>(null);
     const [loading, setLoading] = useState(true);
     const [inputValue, setInputValue] = useState('');
@@ -54,11 +58,14 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [pendingImage, setPendingImage] = useState<{ url: string, base64: string, mimeType: string } | null>(null);
+    const [activeView, setActiveView] = useState<'chat' | 'draw'>('chat');
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const lastInitParams = useRef<string>('');
+    const excalidrawRef = useRef<ExcalidrawWrapperRef>(null);
+    const excalidrawSceneRef = useRef<ExcalidrawSceneData | null>(null);
 
     const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve) => {
@@ -175,7 +182,9 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
             role: 'candidate',
             text: text || (pendingImage ? "[Imagem anexada]" : ""),
             timestamp: new Date(),
-            imageUrl: pendingImage?.url
+            imageUrl: pendingImage?.url,
+            imageBase64: pendingImage?.base64,
+            imageMimeType: pendingImage?.mimeType
         };
 
         const imagePart = pendingImage ? { mimeType: pendingImage.mimeType, data: pendingImage.base64 } : undefined;
@@ -302,16 +311,38 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
         const summary = await summarizeInterview(session);
         if (summary) {
             const safeTitle = sanitizeFileName(session.selectedChallenge?.title || 'entrevista');
-            const saveFileName = `revisao_${safeTitle}_${Date.now()}.md`;
+            const timestamp = Date.now();
+            const saveFileName = `revisao_${safeTitle}_${timestamp}.md`;
+            const imagesFolder = `images_${safeTitle}_${timestamp}`;
+
+            // Save images from messages
+            const imageReferences: string[] = [];
+            const messagesWithImages = session.messages.filter(m => m.imageBase64 && m.imageMimeType);
+
+            if (messagesWithImages.length > 0) {
+                for (let i = 0; i < messagesWithImages.length; i++) {
+                    const msg = messagesWithImages[i];
+                    const ext = msg.imageMimeType === 'image/png' ? 'png' : 'jpg';
+                    const imgFileName = `diagram_${i + 1}.${ext}`;
+                    await handleSaveImage(imagesFolder, imgFileName, msg.imageBase64!, msg.imageMimeType!);
+                    imageReferences.push(`![Diagrama ${i + 1}](./${imagesFolder}/${imgFileName})`);
+                }
+            }
+
+            const imagesSection = imageReferences.length > 0
+                ? `## Diagramas do Candidato\n\n${imageReferences.join('\n\n')}\n\n---\n\n`
+                : '';
 
             const markdownContent = `# Revisão de Entrevista: ${session.selectedChallenge?.title}\n\n` +
                 `**Duração:** ${session.messages.length} mensagens trocadas\n` +
                 `**Data:** ${new Date().toLocaleString()}\n\n` +
                 `---\n\n` +
+                imagesSection +
                 `${summary}\n`;
 
             await handleSaveToFile(saveFileName, markdownContent);
-            alert(`Revisão salva com sucesso como ${saveFileName} na pasta 'desafios'!`);
+            const imgMsg = imageReferences.length > 0 ? ` (${imageReferences.length} imagens salvas)` : '';
+            alert(`Revisão salva com sucesso como ${saveFileName} na pasta 'desafios'!${imgMsg}`);
         }
         setIsGenerating(false);
     };
@@ -332,6 +363,36 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
             await writable.close();
         } catch (error) {
             console.error('Error saving:', error);
+        }
+    };
+
+    const handleSaveImage = async (folderName: string, fileName: string, base64Data: string, mimeType: string) => {
+        if (!directoryHandle) return;
+        try {
+            const parentPath = getParentFolderPath(noteId);
+            let currentHandle = directoryHandle;
+            for (const folder of parentPath) {
+                if (!folder) continue;
+                currentHandle = await currentHandle.getDirectoryHandle(folder, { create: false });
+            }
+            const desafiosHandle = await currentHandle.getDirectoryHandle('desafios', { create: true });
+            const imagesHandle = await desafiosHandle.getDirectoryHandle(folderName, { create: true });
+            const fileHandle = await imagesHandle.getFileHandle(fileName, { create: true });
+
+            // Convert base64 to Blob
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+        } catch (error) {
+            console.error('Error saving image:', error);
         }
     };
 
@@ -399,6 +460,29 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
         setPendingImage(null);
     };
 
+    const handleExcalidrawExport = async (imageUrl: string, base64: string, mimeType: string) => {
+        // Save scene before switching, then set the image as pending
+        if (excalidrawRef.current) {
+            excalidrawSceneRef.current = excalidrawRef.current.getSceneData();
+        }
+        setPendingImage({ url: imageUrl, base64, mimeType });
+        setActiveView('chat');
+    };
+
+    const handleSendDiagram = async () => {
+        if (excalidrawRef.current) {
+            await excalidrawRef.current.exportAsImage();
+        }
+    };
+
+    const handleToggleView = (targetView: 'chat' | 'draw') => {
+        // Save scene before switching away from draw view
+        if (activeView === 'draw' && excalidrawRef.current) {
+            excalidrawSceneRef.current = excalidrawRef.current.getSceneData();
+        }
+        setActiveView(targetView);
+    };
+
     if (loading) {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 p-8">
@@ -433,7 +517,7 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
         }
 
         return (
-            <div className="h-full bg-gray-50 rounded-xl overflow-hidden flex flex-col border border-gray-200">
+            <div className="h-full bg-gray-50 overflow-hidden flex flex-col border border-gray-200">
                 <div className="bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center shadow-sm">
                     <div>
                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -508,6 +592,17 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
                         <i className="fa-solid fa-floppy-disk"></i>
                         <span>Salvar</span>
                     </button>
+                    <button
+                        onClick={() => handleToggleView(activeView === 'chat' ? 'draw' : 'chat')}
+                        className={`group relative px-4 py-2 rounded-xl text-xs font-bold border transition-all shadow-sm active:scale-95 flex items-center gap-2 ${activeView === 'draw'
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-600 hover:text-white'
+                            }`}
+                        title={activeView === 'chat' ? "Abrir quadro de desenho" : "Voltar ao chat"}
+                    >
+                        <i className={`fa-solid ${activeView === 'draw' ? 'fa-comments' : 'fa-pencil'}`}></i>
+                        <span>{activeView === 'draw' ? 'Chat' : 'Desenhar'}</span>
+                    </button>
                     <div className="w-px h-6 bg-gray-200 mx-2"></div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 p-2 rounded-xl hover:bg-gray-100 active:scale-90">
                         <i className="fa-solid fa-xmark text-lg"></i>
@@ -515,94 +610,127 @@ const ChallengeMode: React.FC<ChallengeModeProps> = ({
                 </div>
             </div>
 
-            {/* Chat Area */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-                <MessageList messages={session.messages} isGenerating={isGenerating} />
-            </div>
-
-            {/* Input Area */}
-            <div className="bg-white p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                <div className="max-w-4xl mx-auto flex items-end gap-3">
-                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all flex flex-col gap-2 relative">
-                        {pendingImage && (
-                            <div className="flex items-start gap-2 p-2 bg-indigo-50 rounded-xl border border-indigo-100">
-                                <img
-                                    src={pendingImage.url}
-                                    alt="Anexo"
-                                    className="w-20 h-20 object-cover rounded-lg border border-indigo-200 shadow-sm"
-                                />
-                                <div className="flex-1 flex flex-col gap-1">
-                                    <span className="text-xs font-medium text-indigo-700">Imagem anexada</span>
-                                    <span className="text-[10px] text-indigo-500">Será enviada junto com sua mensagem</span>
-                                </div>
-                                <button
-                                    onClick={removePendingImage}
-                                    className="w-6 h-6 rounded-full bg-white border border-indigo-200 flex items-center justify-center text-indigo-400 hover:text-red-500 hover:border-red-200 transition-colors"
-                                    title="Remover imagem"
-                                >
-                                    <i className="fa-solid fa-xmark text-xs"></i>
-                                </button>
-                            </div>
-                        )}
-                        <textarea
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendMessage();
-                                }
-                            }}
-                            onPaste={handlePaste}
-                            placeholder={isRecording ? "Gravando áudio..." : isTranscribing ? "Transcrevendo áudio..." : pendingImage ? "Adicione uma descrição à imagem..." : "Escreva sua solução ou COLE uma screenshot (Ctrl+V)..."}
-                            className={`w-full bg-transparent border-none focus:ring-0 text-gray-700 resize-none max-h-32 text-sm leading-relaxed ${isTranscribing ? 'opacity-50' : ''}`}
-                            rows={2}
-                            disabled={isGenerating || isRecording || isTranscribing}
-                        />
-                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono">
-                            <span className="flex items-center gap-2">
-                                <i className="fa-solid fa-microphone text-xs opacity-50"></i>
-                                Clique para gravar | Ctrl+V para colar imagem
-                            </span>
-                            <span>Shift+Enter para nova linha</span>
-                        </div>
+            {/* Content Area - Toggle between Chat and Draw */}
+            {activeView === 'chat' ? (
+                <>
+                    {/* Chat Area */}
+                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+                        <MessageList messages={session.messages} isGenerating={isGenerating} />
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <button
-                            onClick={toggleRecording}
-                            disabled={isGenerating || isTranscribing}
-                            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-md active:scale-95 ${isRecording
-                                ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-200'
-                                : isTranscribing
-                                    ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed'
-                                    : 'bg-white text-gray-400 hover:text-indigo-600 border border-gray-100'
-                                }`}
-                            title={isRecording ? "Clique para parar e transcrever" : isTranscribing ? "Transcrevendo..." : "Clique para gravar áudio"}
-                        >
-                            {isTranscribing ? (
-                                <i className="fa-solid fa-spinner fa-spin"></i>
-                            ) : isRecording ? (
-                                <i className="fa-solid fa-stop"></i>
-                            ) : (
-                                <i className="fa-solid fa-microphone"></i>
-                            )}
-                        </button>
+                    {/* Input Area */}
+                    <div className="bg-white p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                        <div className="max-w-4xl mx-auto flex items-end gap-3">
+                            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all flex flex-col gap-2 relative">
+                                {pendingImage && (
+                                    <div className="flex items-start gap-2 p-2 bg-indigo-50 rounded-xl border border-indigo-100">
+                                        <img
+                                            src={pendingImage.url}
+                                            alt="Anexo"
+                                            className="w-20 h-20 object-cover rounded-lg border border-indigo-200 shadow-sm"
+                                        />
+                                        <div className="flex-1 flex flex-col gap-1">
+                                            <span className="text-xs font-medium text-indigo-700">Imagem anexada</span>
+                                            <span className="text-[10px] text-indigo-500">Será enviada junto com sua mensagem</span>
+                                        </div>
+                                        <button
+                                            onClick={removePendingImage}
+                                            className="w-6 h-6 rounded-full bg-white border border-indigo-200 flex items-center justify-center text-indigo-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                                            title="Remover imagem"
+                                        >
+                                            <i className="fa-solid fa-xmark text-xs"></i>
+                                        </button>
+                                    </div>
+                                )}
+                                <textarea
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                    onPaste={handlePaste}
+                                    placeholder={isRecording ? "Gravando áudio..." : isTranscribing ? "Transcrevendo áudio..." : pendingImage ? "Adicione uma descrição à imagem..." : "Escreva sua solução ou COLE uma screenshot (Ctrl+V)..."}
+                                    className={`w-full bg-transparent border-none focus:ring-0 text-gray-700 resize-none max-h-32 text-sm leading-relaxed ${isTranscribing ? 'opacity-50' : ''}`}
+                                    rows={2}
+                                    disabled={isGenerating || isRecording || isTranscribing}
+                                />
+                                <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono">
+                                    <span className="flex items-center gap-2">
+                                        <i className="fa-solid fa-microphone text-xs opacity-50"></i>
+                                        Clique para gravar | Ctrl+V para colar imagem
+                                    </span>
+                                    <span>Shift+Enter para nova linha</span>
+                                </div>
+                            </div>
 
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={toggleRecording}
+                                    disabled={isGenerating || isTranscribing}
+                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-md active:scale-95 ${isRecording
+                                        ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-200'
+                                        : isTranscribing
+                                            ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed'
+                                            : 'bg-white text-gray-400 hover:text-indigo-600 border border-gray-100'
+                                        }`}
+                                    title={isRecording ? "Clique para parar e transcrever" : isTranscribing ? "Transcrevendo..." : "Clique para gravar áudio"}
+                                >
+                                    {isTranscribing ? (
+                                        <i className="fa-solid fa-spinner fa-spin"></i>
+                                    ) : isRecording ? (
+                                        <i className="fa-solid fa-stop"></i>
+                                    ) : (
+                                        <i className="fa-solid fa-microphone"></i>
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={() => handleSendMessage()}
+                                    disabled={(!inputValue.trim() && !pendingImage) || isGenerating || isRecording || isTranscribing}
+                                    className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center transition-all hover:bg-indigo-700 disabled:opacity-50 disabled:grayscale shadow-lg shadow-indigo-200 active:scale-95"
+                                >
+                                    {isGenerating ? (
+                                        <i className="fa-solid fa-circle-notch fa-spin"></i>
+                                    ) : (
+                                        <i className="fa-solid fa-paper-plane"></i>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                /* Excalidraw View */
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 relative">
+                        <ExcalidrawWrapper
+                            ref={excalidrawRef}
+                            onExportToChat={handleExcalidrawExport}
+                            theme="light"
+                            initialData={excalidrawSceneRef.current}
+                        />
+                    </div>
+                    <div className="bg-white p-4 border-t border-gray-200 flex justify-center gap-4">
                         <button
-                            onClick={() => handleSendMessage()}
-                            disabled={(!inputValue.trim() && !pendingImage) || isGenerating || isRecording || isTranscribing}
-                            className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center transition-all hover:bg-indigo-700 disabled:opacity-50 disabled:grayscale shadow-lg shadow-indigo-200 active:scale-95"
+                            onClick={() => handleToggleView('chat')}
+                            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold border border-gray-200 hover:bg-gray-200 transition-all flex items-center gap-2"
                         >
-                            {isGenerating ? (
-                                <i className="fa-solid fa-circle-notch fa-spin"></i>
-                            ) : (
-                                <i className="fa-solid fa-paper-plane"></i>
-                            )}
+                            <i className="fa-solid fa-arrow-left"></i>
+                            Voltar ao Chat
+                        </button>
+                        <button
+                            onClick={handleSendDiagram}
+                            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
+                        >
+                            <i className="fa-solid fa-paper-plane"></i>
+                            Enviar Diagrama
                         </button>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

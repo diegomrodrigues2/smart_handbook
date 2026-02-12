@@ -55,6 +55,22 @@ export interface AppState {
   chatOpen: boolean;
 }
 
+// ============================================================================
+// TAB SYSTEM TYPES
+// ============================================================================
+
+export type StudyModeType = 'learning' | 'lesson' | 'workbook' | 'challenge' | 'interview' | 'pairProgramming' | 'conceptExtraction' | 'excalidraw' | 'drawio' | 'projectSpec';
+
+export interface Tab {
+  id: string;
+  fileId: string;              // Reference to FileNode.id
+  name: string;                // Display name
+  isPinned: boolean;           // false = preview (italic), true = pinned (normal)
+  isStudyMode: boolean;        // true if this is a study mode tab
+  studyModeType?: StudyModeType;
+  fileType?: 'markdown' | 'pdf';
+}
+
 // Learning Mode Types
 export interface SuggestedProblem {
   id: string;
@@ -187,6 +203,8 @@ export interface ChallengeMessage {
   text: string;
   timestamp: Date;
   imageUrl?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
   audioUrl?: string;
 }
 
@@ -319,3 +337,82 @@ export interface ExtractionSession {
   concepts: Concept[];
   isExtracting: boolean;
 }
+
+// ============================================================================
+// PROJECT SPECIFICATION MODE TYPES
+// ============================================================================
+
+// Project specification type: from scratch (learning) or AWS (production)
+export type ProjectSpecType = 'fromScratch' | 'aws';
+
+// Project challenge - similar to Challenge but for project context
+export interface ProjectChallenge {
+  id: string;
+  title: string;
+  type: 'System Design' | 'Low Level Design';
+  description: string;
+  ambiguousPrompt: string; // The challenge prompt with intentional ambiguity
+}
+
+// Simplified session used only for saving specs
+export interface ProjectSpecSession {
+  noteId: string;
+  noteName: string;
+  mode: SubjectMode;
+  specType: ProjectSpecType;
+}
+
+// ============================================================================
+// BLOCK EDITOR TYPES (Notion-Style Inline Editing & LLM Actions)
+// ============================================================================
+
+export type BlockAction =
+  | 'mermaid-sequence'
+  | 'mermaid-graph'
+  | 'mermaid-flowchart'
+  | 'mermaid-class'
+  | 'mermaid-er'
+  | 'mermaid-state'
+  | 'mermaid-gantt'
+  | 'tradeoffs-table'
+  | 'code-example'
+  | 'implementation-guide'
+  | 'enrich'
+  | 'more-detailed'
+  | 'summarize'
+  | 'excalidraw'
+  | 'drawio'
+  | 'requirements'
+  | 'api-contract'
+  | 'system-spec'
+  | 'implementation-design'
+  | 'implementation-tasks';
+
+export type CodeLanguage =
+  | 'python'
+  | 'java'
+  | 'pseudocode'
+  | 'terraform'
+  | 'go'
+  | 'typescript'
+  | 'rust'
+  | 'scala'
+  | 'sql'
+  | 'pyspark'
+  | 'cloudformation'
+  | 'kubernetes';
+
+export interface ConceptSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  sectionType: string; // e.g., 'tradeoffs', 'code-example', 'diagram', 'implementation-guide'
+}
+
+export interface NoteMetadata {
+  sourceFile?: string;       // Path to the source file (PDF or MD) that generated this concept
+  sourceType?: 'pdf' | 'md';
+  suggestions?: ConceptSuggestion[];
+  createdAt?: string;
+}
+

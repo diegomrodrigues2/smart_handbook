@@ -78,3 +78,19 @@ export {
     getNavigatorInteractionPrompt,
     getFullSolutionPrompt
 } from './pairProgrammingPrompts';
+
+// Roteiro (Study Script) Prompts
+export {
+    getStudyScriptPrompt,
+    getStudyScriptSystemPrompt
+} from './roteiroPrompts';
+
+// Project Specification Mode Prompts
+export {
+    PROJECT_SPEC_FROM_SCRATCH_PROMPT,
+    PROJECT_SPEC_AWS_PROMPT,
+    PROJECT_CHALLENGE_GENERATION_PROMPTS,
+    getProjectChallengeGenerationPrompt,
+    getChallengeBasedSpecPrompt
+} from './projectSpecPrompts';
+

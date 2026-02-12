@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FileTree from '../FileTree';
 import SearchBar from './SearchBar';
 import SidebarToolbar from './SidebarToolbar';
 import SubjectModeSelector from '../SubjectModeSelector';
+import TableOfContents from './TableOfContents';
 import { FileNode } from '../../types';
+
+type SidebarView = 'files' | 'toc';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -14,8 +17,9 @@ interface SidebarProps {
     searchQuery: string;
     onSearchChange: (value: string) => void;
     filteredFiles: FileNode[];
-    selectedFileId: string | null;
-    onSelectFile: (node: FileNode) => void;
+    selectedIds: Set<string>;
+    onSelectionChange: (ids: Set<string>) => void;
+    onSelectFile: (node: FileNode, isPinned: boolean) => void;
     onToggleFolder: (id: string, isOpen: boolean) => void;
     onNewFile: () => void;
     onNewFolder: () => void;
@@ -23,6 +27,18 @@ interface SidebarProps {
     onRefresh?: () => void;
     onCollapse: () => void;
     showRefresh: boolean;
+    onGenerateRoteiro?: (folderIds: string[]) => void;
+    onDeleteItems?: (ids: string[]) => void;
+    onMoveItems?: (ids: string[], targetFolderId: string) => void;
+    onGroupInFolder?: (ids: string[]) => void;
+    showFavorites: boolean;
+    onToggleFavoritesView: () => void;
+    favorites: Set<string>;
+    onToggleFavorite: (fileId: string) => void;
+    onRenameItem?: (id: string, name: string) => void;
+    onCreateNote?: (folderId: string) => void;
+    onOpenSettings?: () => void;
+    activeNoteContent?: string | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -34,7 +50,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     searchQuery,
     onSearchChange,
     filteredFiles,
-    selectedFileId,
+    selectedIds,
+    onSelectionChange,
     onSelectFile,
     onToggleFolder,
     onNewFile,
@@ -42,8 +59,25 @@ const Sidebar: React.FC<SidebarProps> = ({
     onLoadDirectory,
     onRefresh,
     onCollapse,
-    showRefresh
+    showRefresh,
+    onGenerateRoteiro,
+    onDeleteItems,
+    onMoveItems,
+    onGroupInFolder,
+    showFavorites,
+    onToggleFavoritesView,
+    favorites,
+    onToggleFavorite,
+    onRenameItem,
+    onCreateNote,
+    onOpenSettings,
+    activeNoteContent
 }) => {
+    const [activeView, setActiveView] = useState<SidebarView>('files');
+
+    const hasContent = !!activeNoteContent;
+    const effectiveView = activeView === 'toc' && !hasContent ? 'files' : activeView;
+
     return (
         <div
             style={{ width: isOpen ? width : 0 }}
@@ -65,33 +99,98 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Subject Mode Selector */}
             <SubjectModeSelector />
 
-            {/* Search */}
-            <SearchBar value={searchQuery} onChange={onSearchChange} />
+            {/* View Toggle — Files / TOC */}
+            <div className="px-2 pt-2 pb-1 flex-shrink-0">
+                <div className="flex bg-gray-200/70 rounded-lg p-0.5">
+                    <button
+                        onClick={() => setActiveView('files')}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all duration-200 ${effectiveView === 'files'
+                                ? 'bg-white text-gray-800 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <i className="fa-solid fa-folder-tree text-[10px]"></i>
+                        <span>Arquivos</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveView('toc')}
+                        disabled={!hasContent}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all duration-200 ${effectiveView === 'toc'
+                                ? 'bg-white text-gray-800 shadow-sm'
+                                : hasContent
+                                    ? 'text-gray-500 hover:text-gray-700'
+                                    : 'text-gray-300 cursor-not-allowed'
+                            }`}
+                        title={hasContent ? 'Table of Contents' : 'Abra uma nota markdown para ver o sumário'}
+                    >
+                        <i className="fa-solid fa-list-ol text-[10px]"></i>
+                        <span>Sumário</span>
+                    </button>
+                </div>
+            </div>
 
-            {/* Toolbar */}
-            <SidebarToolbar
-                onNewFile={onNewFile}
-                onNewFolder={onNewFolder}
-                onLoadDirectory={onLoadDirectory}
-                onRefresh={onRefresh}
-                onCollapse={onCollapse}
-                showRefresh={showRefresh}
-            />
+            {/* Conditional rendering based on active view */}
+            {effectiveView === 'files' ? (
+                <>
+                    {/* Search */}
+                    <SearchBar value={searchQuery} onChange={onSearchChange} />
 
-            {/* File Tree */}
-            <div className="flex-1 overflow-y-auto">
-                {filteredFiles.length > 0 ? (
-                    <FileTree
-                        nodes={filteredFiles}
-                        onSelectFile={onSelectFile}
-                        onToggleFolder={onToggleFolder}
-                        selectedFileId={selectedFileId}
+                    {/* Toolbar */}
+                    <SidebarToolbar
+                        onNewFile={onNewFile}
+                        onNewFolder={onNewFolder}
+                        onLoadDirectory={onLoadDirectory}
+                        onRefresh={onRefresh}
+                        onCollapse={onCollapse}
+                        showRefresh={showRefresh}
+                        showFavorites={showFavorites}
+                        onToggleFavorites={onToggleFavoritesView}
                     />
-                ) : (
-                    <div className="p-4 text-center text-gray-400 text-xs mt-4">
-                        No documents found.
+
+                    {/* File Tree */}
+                    <div className="flex-1 overflow-y-auto">
+                        {filteredFiles.length > 0 ? (
+                            <FileTree
+                                nodes={filteredFiles}
+                                onSelectFile={onSelectFile}
+                                onToggleFolder={onToggleFolder}
+                                selectedIds={selectedIds}
+                                onSelectionChange={onSelectionChange}
+                                onGenerateRoteiro={onGenerateRoteiro}
+                                onDeleteItems={onDeleteItems}
+                                onMoveItems={onMoveItems}
+                                onGroupInFolder={onGroupInFolder}
+                                favorites={favorites}
+                                onToggleFavorite={onToggleFavorite}
+                                onRenameItem={onRenameItem}
+                                onCreateNote={onCreateNote}
+                            />
+                        ) : (
+                            <div className="p-4 text-center text-gray-400 text-xs mt-4">
+                                No documents found.
+                            </div>
+                        )}
                     </div>
-                )}
+                </>
+            ) : (
+                /* Table of Contents View */
+                <div className="flex-1 overflow-y-auto">
+                    {activeNoteContent && (
+                        <TableOfContents content={activeNoteContent} />
+                    )}
+                </div>
+            )}
+
+            {/* Settings Button - Bottom of Sidebar */}
+            <div className="border-t border-gray-200 p-2 flex-shrink-0">
+                <button
+                    onClick={onOpenSettings}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-md transition-colors text-sm"
+                    title="Settings"
+                >
+                    <i className="fa-solid fa-gear"></i>
+                    <span>Settings</span>
+                </button>
             </div>
         </div>
     );

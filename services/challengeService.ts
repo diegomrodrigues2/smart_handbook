@@ -8,19 +8,12 @@ import {
     getChallengeSavePrompt,
     getCustomChallengeGenerationPrompt
 } from "./prompts";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || '';
-
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-};
-
-const MODEL_ID = "gemini-3-pro-preview";
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
 import { arrayBufferToBase64 } from "./pdfContentService";
 
@@ -53,7 +46,7 @@ export const generateChallengeAlternatives = async (
         }
 
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7,
@@ -124,7 +117,7 @@ export const generateCustomChallenge = async (
         }
 
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7,
@@ -227,7 +220,7 @@ export const getInterviewResponse = async (
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts }],
             config: { temperature: 0.7 }
         });
@@ -258,7 +251,7 @@ export const requestHint = async (
 
     try {
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             config: { temperature: 0.7 }
         });
@@ -307,7 +300,7 @@ export const generateSolution = async (
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts }],
             config: { temperature: 0.7 }
         });
@@ -338,7 +331,7 @@ export const summarizeInterview = async (
 
     try {
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: prompt,
             config: { temperature: 0.7 }
         });

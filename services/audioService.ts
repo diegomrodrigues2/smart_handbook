@@ -1,17 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || '';
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-};
-
-const MODEL_ID = "gemini-2.5-flash-preview-tts";
+// TTS-specific model (not affected by settings model selection)
+const TTS_MODEL_ID = "gemini-2.5-flash-preview-tts";
 
 // ============================================================================
 // Audio Explanation Service
@@ -61,7 +57,7 @@ export const generateAudioExplanation = async (
         onProgress?.("Gerando roteiro da explicação...");
 
         const textResponse = await ai.models.generateContent({
-            model: "gemini-3-pro-preview",
+            model: getSelectedModel(),
             contents: EXPLANATION_PROMPT + noteContent,
             config: { temperature: 0.7 }
         });
@@ -77,7 +73,7 @@ export const generateAudioExplanation = async (
         onProgress?.("Sintetizando áudio...");
 
         const audioResponse = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: TTS_MODEL_ID,
             contents: explanationText,
             config: {
                 responseModalities: ["AUDIO"],
@@ -202,7 +198,7 @@ export const generateAudioFromPDF = async (
         const pdfBase64 = btoa(binary);
 
         const textResponse = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: getSelectedModel(),
             contents: [
                 {
                     role: 'user',
@@ -231,7 +227,7 @@ export const generateAudioFromPDF = async (
         onProgress?.("Sintetizando áudio...");
 
         const audioResponse = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: TTS_MODEL_ID,
             contents: explanationText,
             config: {
                 responseModalities: ["AUDIO"],
@@ -270,7 +266,7 @@ export const transcribeAudio = async (audioBase64: string, mimeType: string): Pr
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: getSelectedModel(),
             contents: [
                 {
                     role: 'user',

@@ -1,23 +1,21 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { SubjectMode, Concept } from "../types";
+import { SubjectMode, Concept, ConceptSuggestion } from "../types";
 import { getConceptExtractionPrompt, getConceptDefinitionPrompt } from "./prompts";
 import { arrayBufferToBase64 } from "./pdfContentService";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || ''; // Ensure this is securely handled
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
-let client: GoogleGenAI | null = null;
-
-function getClient(): GoogleGenAI {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client as GoogleGenAI;
+// Result type for extraction — suggestions are per-concept
+export interface ExtractionResult {
+    concepts: (Concept & { suggestions: ConceptSuggestion[] })[];
 }
 
-const MODEL_ID = "gemini-3-pro-preview";
-
-// Schema for structured output for extraction
+// Schema for structured output for extraction (suggestions nested per concept)
 const conceptListSchema = {
     type: "object" as const,
     properties: {
@@ -32,9 +30,22 @@ const conceptListSchema = {
                     dependencies: {
                         type: "array" as const,
                         items: { type: "string" as const }
+                    },
+                    suggestions: {
+                        type: "array" as const,
+                        items: {
+                            type: "object" as const,
+                            properties: {
+                                id: { type: "string" as const },
+                                title: { type: "string" as const },
+                                description: { type: "string" as const },
+                                sectionType: { type: "string" as const }
+                            },
+                            required: ["id", "title", "description", "sectionType"]
+                        }
                     }
                 },
-                required: ["id", "title", "description", "dependencies"]
+                required: ["id", "title", "description", "dependencies", "suggestions"]
             }
         }
     },
@@ -42,13 +53,13 @@ const conceptListSchema = {
 };
 
 /**
- * Extracts concepts from the provided content (text or PDF).
+ * Extracts concepts and per-concept section suggestions from the provided content (text or PDF).
  */
 export async function extractConcepts(
     noteContent: string,
     mode: SubjectMode,
     pdfData?: ArrayBuffer
-): Promise<Concept[] | null> {
+): Promise<ExtractionResult | null> {
     try {
         const client = getClient();
         if (!client) {
@@ -57,25 +68,36 @@ export async function extractConcepts(
         }
 
         const promptTemplate = getConceptExtractionPrompt(mode);
+        // Add instruction to also extract per-concept suggestions
+        const suggestionsInstruction = `\n\nPara CADA conceito extraído, inclua também um campo "suggestions" — uma lista de seções que enriqueceriam a definição desse conceito específico. Cada sugestão deve ter: id (string), title (nome da seção), description (breve descrição do que a seção conterá), sectionType (um de: 'tradeoffs', 'code-example', 'diagram', 'implementation-guide', 'deep-dive', 'use-cases', 'comparison'). As sugestões devem ser específicas e relevantes para o conceito em questão.`;
+        const promptWithSuggestions = promptTemplate + suggestionsInstruction;
         // If it's just text, append it. If PDF, the model sees it as attachment.
-        const effectivePrompt = pdfData ? promptTemplate : promptTemplate + "\n\n" + noteContent;
+        const effectivePrompt = pdfData ? promptWithSuggestions : promptWithSuggestions + "\n\n" + noteContent;
 
         const contentParts: any[] = [];
+
         if (pdfData) {
-            contentParts.push({
+            console.log('[ConceptExtraction] Using PDF data for generation, size:', pdfData.byteLength);
+
+            const pdfPart = {
                 inlineData: {
                     data: arrayBufferToBase64(pdfData),
                     mimeType: 'application/pdf'
                 }
-            });
+            };
+            const textPart = { text: effectivePrompt };
+
+            contentParts.push(pdfPart);
+            contentParts.push(textPart);
+        } else {
+            contentParts.push({ text: effectivePrompt });
         }
-        contentParts.push({ text: effectivePrompt });
 
         const response = await client.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
-                temperature: 0.1, // Low temperature for consistent extraction
+                temperature: 0.1,
                 responseMimeType: "application/json",
                 responseSchema: conceptListSchema
             }
@@ -90,13 +112,21 @@ export async function extractConcepts(
             return null;
         }
 
-        return parsed.concepts.map((c: any) => ({
+        const concepts = parsed.concepts.map((c: any) => ({
             id: c.id,
             name: c.title,
             shortDefinition: c.description,
             fileName: serializeFilename(c.title),
-            status: 'pending' // Initial status
+            status: 'pending' as const,
+            suggestions: (c.suggestions || []).map((s: any) => ({
+                id: s.id,
+                title: s.title,
+                description: s.description,
+                sectionType: s.sectionType
+            }))
         }));
+
+        return { concepts };
 
     } catch (error) {
         console.error("Error extracting concepts:", error);
@@ -122,6 +152,7 @@ export async function generateConceptDefinition(
 
         const contentParts: any[] = [];
         if (pdfData) {
+            console.log('[GenerateDefinition] Using PDF data for definition, size:', pdfData.byteLength);
             contentParts.push({
                 inlineData: {
                     data: arrayBufferToBase64(pdfData),
@@ -135,7 +166,7 @@ export async function generateConceptDefinition(
         }
 
         const responseStream = await client.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7

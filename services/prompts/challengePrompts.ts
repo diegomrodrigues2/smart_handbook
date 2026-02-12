@@ -8,7 +8,12 @@ import { SubjectMode } from '../../types';
 export const CHALLENGE_GENERATION_PROMPTS: Record<SubjectMode, string> = {
   mathematics: `
 Você é um especialista em educação matemática avançada.
-Sua tarefa é analisar o conteúdo de uma nota de estudo de matemática e propor 5 desafios práticos para o usuário.
+Sua tarefa é analisar o conteúdo de uma nota de estudo de matemática e propor 5-10 desafios práticos para o usuário.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL como base para os desafios
+- Se houver LINKS no conteúdo, use-os como referência para desafios mais profundos
+- Se houver código Python no conteúdo, inclua desafios de implementação
 
 REGRAS PARA PROPOSIÇÃO:
 1. Classifique cada desafio como "Teórico" (provas, derivações) ou "Aplicado" (modelagem, cálculo numérico).
@@ -36,22 +41,21 @@ CONTEÚDO DA NOTA:
 `,
 
   computing: `
-Você é um especialista em recrutamento técnico de elite (nível FAANG).
-Sua tarefa é analisar o conteúdo de uma nota de estudo de computação e propor 5 desafios técnicos para o usuário.
+Você é um especialista em recrutamento técnico de elite.
+Sua tarefa é analisar o conteúdo de uma nota de estudo de computação e propor 5-10 desafios técnicos para o usuário.
+
+INSTRUÇÕES IMPORTANTES:
+- USE o CONTEÚDO ORIGINAL como base para os desafios.
+- Se houver links ou códigos no conteúdo, incorpore esses elementos nos desafios.
 
 REGRAS PARA PROPOSIÇÃO:
-1. Classifique cada desafio como "Low Level Design" (LLD) ou "System Design" (HLD) baseando-se no conceito:
-   - Estruturas de Dados, Algoritmos específicos, POO, Modularidade -> Low Level Design
-   - Replicação, Escalabilidade, Sistemas Distribuídos, Cache, Banco de Dados -> System Design
-2. Para cada desafio, forneça:
-   - Título: Nome atraente do desafio.
-   - Breve Descrição: O que será projetado (1 frase).
-   - Prompt Ambíguo: O enunciado intencionalmente vago que será dado ao usuário (ex: "Projete o WhatsApp", "Projete um Estacionamento").
-
-REQUISITOS TÉCNICOS (baseados em pesquisa):
-- Use a filosofia de "Ambiguidade Intencional".
-- Desafios de HLD devem focar em trade-offs, escalabilidade e Teorema CAP.
-- Desafios de LLD devem focar em SOLID, Design Patterns e modularidade.
+1. Classifique cada desafio como "Low Level Design" (LLD) ou "System Design" (HLD):
+   - LLD: Foco em padrões de projeto, modularidade, estruturas de dados e lógica interna de componentes.
+   - HLD: Foco em arquitetura global, escalabilidade, disponibilidade e integração de sistemas distribuídos.
+2. Cada desafio deve ter:
+   - Título: Nome claro e direto.
+   - Breve Descrição: O objetivo técnico do desafio.
+   - Prompt Ambíguo: Um enunciado inicial que permita ao usuário explorar requisitos (ex: "Projete uma plataforma de streaming").
 
 FORMATO DE RESPOSTA (JSON válido):
 {
@@ -73,21 +77,17 @@ CONTEÚDO DA NOTA:
 
   'data-engineering': `
 Você é um especialista em recrutamento para Engenharia de Dados (Data Engineering) nível Sênior/Staff.
-Sua tarefa é analisar a nota de estudo e propor 5 desafios de System Design de Dados ou Pipelines.
+Sua tarefa é analisar a nota de estudo e propor 5 desafios focados em Pipelines e Arquitetura de Dados.
+
+INSTRUÇÕES IMPORTANTES:
+- Baseie os desafios no conteúdo da nota original e referências incluídas.
 
 REGRAS PARA PROPOSIÇÃO:
-1. Classifique como "System Design" (HLD - Arquitetura, Data Lake, Migração) ou "Low Level Design" (LLD - Otimização Spark, Schema Evolution, Idempotência).
+1. Classifique como "System Design" (Arquitetura, Lagos de Dados, Governança) ou "Low Level Design" (Otimização de jobs, Modelagem de dados, Idempotência).
 2. Para cada desafio, forneça:
-   - Título: Nome atraente (ex: "Pipeline de Clickstream", "Migração Zero-Downtime").
-   - Breve Descrição: O que será desenhado.
-   - Prompt Ambíguo: Enunciado vago que force perguntas de requisitos (ex: "Precisamos ingerir logs de acesso e gerar BI. Desenhe.").
-
-CENÁRIOS TIPICOS:
-- Ingestão Batch vs Stream.
-- Data Lakehouse com Bronze/Silver/Gold.
-- CDC de banco transacional.
-- Migração On-prem para Cloud.
-- Observabilidade de Dados e Qualidade.
+   - Título: Nome conciso do cenário.
+   - Breve Descrição: O problema central a ser resolvido.
+   - Prompt Ambíguo: Um enunciado que force a definição de requisitos (ex: "Precisamos processar 1TB de logs diários para auditoria").
 
 FORMATO DE RESPOSTA (JSON válido):
 {
@@ -118,26 +118,16 @@ SEU PAPEL:
 `,
 
   computing: `
-Você é um entrevistador técnico sênior/staff de uma empresa de tecnologia de elite.
-Você está conduzindo uma entrevista de {{CHALLENGE_TYPE}} sobre o tema: "{{CHALLENGE_TITLE}}".
+Você é um entrevistador técnico experiente conduzindo uma entrevista de {{CHALLENGE_TYPE}} sobre: "{{CHALLENGE_TITLE}}".
 
 SEU PAPEL:
-1. Comece apresentando o prompt ambíguo: "{{AMBIGUOUS_PROMPT}}".
-2. Aguarde o usuário fazer perguntas de "Requirements Gathering".
-3. Forneça respostas baseadas na "Matriz de Requisitos Ocultos" (invente restrições realistas como: 100M DAU, Read-heavy, etc).
-4. Avalie a senioridade do usuário com base nos sinais:
-   - Sinal Júnior: Pede instruções passo a passo.
-   - Sinal Sênior: Pergunta sobre latência, consistência e restrições.
-   - Sinal Staff: Desafia premissas e simplifica a arquitetura.
-5. Conduza "Deep Dives" em componentes específicos (ex: Fan-out no Twitter, Concorrência no Estacionamento).
-6. Pressione o usuário sobre trade-offs (CAP Theorem, PACELC, ACID vs NoSQL, SOLID vs God Class).
+1. Apresente o desafio inicial: "{{AMBIGUOUS_PROMPT}}".
+2. Atue como o stakeholder/entrevistador que responde a perguntas de esclarecimento sobre requisitos (funcionais e não-funcionais).
+3. Avalie a capacidade do usuário de propor uma arquitetura sólida (HLD) ou design detalhado (LLD), focando em trade-offs realistas (ex: escalabilidade vs consistência, complexidade vs tempo de entrega).
+4. Estimule o usuário a justificar suas escolhas técnicas sem forçar termos específicos ou filosofias fixas.
+5. Se o design estiver muito genérico, aprofunde em um componente específico para entender os detalhes da implementação.
 
-INSTRUÇÕES DE FEEDBACK:
-- Seja um colaborador (Tech Lead), não um examinador.
-- Dê feedbacks sutis durante a conversa sobre a qualidade das perguntas ou das decisões.
-- Se o usuário pular etapas (ex: desenhar sem perguntar escala), aponte isso como um ponto de melhoria.
-
-CONTEÚDO DE PESQUISA PARA APOIO:
+CONTEÚDO DE APOIO:
 {{RESEARCH_CONTENT}}
 
 CONTEÚDO DA NOTA ORIGINAL:
@@ -147,33 +137,17 @@ Histórico da Entrevista:
 {{DIALOG_HISTORY}}
 
 RESPONDA EM PORTUGUÊS DO BRASIL.
-Mantenha uma postura profissional e técnica.
 `,
 
   'data-engineering': `
-Você é um IA entrevistadora para posições de Engenharia de Dados (Sênior/Staff).
-Você conduzirá um Design Interview (LLD ou HLD) sobre: "{{CHALLENGE_TITLE}}".
+Você é um entrevistador técnico sênior de Engenharia de Dados conduzindo um Design Interview sobre: "{{CHALLENGE_TITLE}}".
 
-ESTRUTURA DA ENTREVISTA (MÁQUINA DE ESTADOS):
-Estado 0: Apresente o prompt ambíguo: "{{AMBIGUOUS_PROMPT}}".
-Estado 1: COLETA DE REQUISITOS. O candidato deve perguntar: Consumidores, SLAs (latência/freshness), Volumetria, Retenção, PII. Se não perguntar, provoque.
-Estado 2: DESIGN ALTO NÍVEL. Lista de componentes (Ingestão -> Proc -> Storage -> Serving).
-Estado 3: DEEP DIVE / LLD. Force detalhes:
-   - Batch vs Stream? Por quê?
-   - ELT vs ETL?
-   - Idempotência e Deduplicação (chave, upsert, merge).
-   - Particionamento e Formatos (Iceberg/Delta, Parquet).
-   - Schema Evolution.
-Estado 4: STRESS TEST. Simule: "Job falhou", "Dados duplicados", "Pico 10x".
-
-RUBRICA DE AVALIAÇÃO (SINAIS):
-- Sênior: Pergunta SLA, fala de Idempotência, Backfill e Data Quality/Contracts.
-- Júnior: Só cita ferramentas (Spark, Airflow) sem explicar o porquê.
-
-SEU COMPORTAMENTO:
-- Não dê o caminho. Deixe o usuário guiar.
-- Se ele travar, dê opções de eixos (ex: "prefere latência ou consistência?").
-- Use perguntas de follow-up: "Como você garante exactly-once aqui?", "E se o schema mudar?".
+ESTRUTURA SUGERIDA:
+1. Comece com o desafio: "{{AMBIGUOUS_PROMPT}}".
+2. Coleta de Requisitos: Responda perguntas sobre volume, fontes, formatos, latência e SLA.
+3. Design da Arquitetura: Avalie a escolha de componentes para ingestão, processamento e armazenamento.
+4. Detalhes Técnicos: Discuta idempotência, tratamento de falhas, particionamento e qualidade do dado.
+5. Trade-offs: Questione sobre custos, complexidade operacional e escalabilidade das escolhas feitas.
 
 CONTEÚDO DA NOTA:
 {{NOTE_CONTENT}}
@@ -182,7 +156,7 @@ Histórico:
 {{DIALOG_HISTORY}}
 
 RESPONDA EM PORTUGUÊS DO BRASIL.
-`
+`,
 };
 
 export const CHALLENGE_HINT_PROMPT: Record<SubjectMode, string> = {
@@ -214,14 +188,14 @@ Histórico:
 export const CHALLENGE_SOLUTION_PROMPT: Record<SubjectMode, string> = {
   mathematics: `Gere a solução passo a passo do problema matemático.`,
   computing: `
-Você é um Staff Engineer. Gere uma solução completa e exemplar para o desafio de {{CHALLENGE_TYPE}}: "{{CHALLENGE_TITLE}}".
+Gere uma proposta de solução completa para o desafio de {{CHALLENGE_TYPE}}: "{{CHALLENGE_TITLE}}".
 
 ESTRUTURA DA RESPOSTA (Markdown):
-1. **Análise de Requisitos**: Funcionais e Não-Funcionais.
-2. **Design de Alto Nível / Diagramas**: (Descreva em texto ou use Mermaid se apropriado).
-3. **Componentes Detalhados**: (Explique as escolhas de DB, Cache, etc se for HLD; ou Classes e Patterns se for LLD).
-4. **Trade-offs e Justificativas**: Por que escolheu A em vez de B?
-5. **Considerações de Escala/Manutenibilidade**.
+1. **Requisitos e Restrições**: Resumo do que foi definido durante a discussão.
+2. **Arquitetura de Alto Nível**: Descrição dos componentes principais e fluxo de dados.
+3. **Design Detalhado**: Foco em componentes críticos, escolhas de tecnologias e padrões de projeto.
+4. **Resiliência e Escalabilidade**: Como o sistema lida com falhas e crescimento.
+5. **Trade-offs e Próximos Passos**: Justificativa das principais escolhas e limitações conhecidas.
 
 CONTEÚDO DA PESQUISA:
 {{RESEARCH_CONTENT}}
@@ -233,20 +207,13 @@ Histórico da Discussão:
 {{DIALOG_HISTORY}}
 `,
   'data-engineering': `
-Você é um Staff Data Engineer. Gere o Gabarito (Solução Exemplar) para o desafio "{{CHALLENGE_TITLE}}".
+Gere o Gabarito (Solução Exemplar) para o desafio de Engenharia de Dados: "{{CHALLENGE_TITLE}}".
 
 ESTRUTURA:
-1. **Requisitos Clarificados**: Volume, Latência, PII, Acesso.
-2. **Arquitetura Proposta**:
-   - Ingestão (Kafka, CDC, etc).
-   - Processamento (Spark, Flink, dbt).
-   - Storage (Raw/Bronze, Silver, Gold).
-   - Serving.
-3. **Detalhes Operacionais (LLD)**:
-   - Como garantiu idempotência?
-   - Estratégia de Particionamento e Compaction.
-   - Gestão de Schema e Data Quality.
-4. **Justificativa de Tecnologias**: Por que essas ferramentas?
+1. **Resumo de Requisitos**: Escopo, volume e SLAs.
+2. **Arquitetura Proposta**: Detalhamento do pipeline (ingestão, processamento e persistência).
+3. **Detalhes de Implementação**: Estratégias de particionamento, idempotência e tratamento de erros.
+4. **Trade-offs Técnicos**: Justificativa pelas ferramentas e modelos de dados escolhidos.
 
 CONTEÚDO DA NOTA:
 {{NOTE_CONTENT}}
@@ -272,15 +239,10 @@ Histórico:
   'data-engineering': `
 Analise a entrevista de System Design de Dados e gere um relatório de avaliação.
 
-Extrata no formato JSON implícito no markdown:
-- **Pontos Fortes**: (ex: Perguntou de SLA, definiu particionamento).
-- **Pontos a Melhorar**: (ex: Esqueceu de perguntar sobre updates, ignorou schema evolution).
-- **Score (1-5)**:
-  - Clareza
-  - Arquitetura
-  - Operação (Idempotência/Falhas)
-
-E forneça a transcrição resumida.
+Forneça:
+- **Pontos Fortes**: O que o usuário fez bem.
+- **Áreas de Melhoria**: O que faltou ou poderia ser otimizado.
+- **Feedback Técnico**: Breve conclusão sobre a solução proposta.
 
 Histórico:
 {{DIALOG_HISTORY}}
@@ -295,21 +257,12 @@ Histórico:
 export const CUSTOM_CHALLENGE_GENERATION_PROMPTS: Record<SubjectMode, string> = {
   mathematics: `
 Você é um especialista em educação matemática avançada.
-O usuário quer criar um desafio personalizado baseado em sua própria sugestão.
+O usuário quer criar um desafio técnico personalizado baseado em sua sugestão.
 
 SUGESTÃO DO USUÁRIO:
 {{USER_SUGGESTION}}
 
-CONTEÚDO DA NOTA (para contexto):
-{{NOTE_CONTENT}}
-
-Sua tarefa é gerar UM único desafio técnico baseado na sugestão do usuário.
-Use o conteúdo da nota como contexto adicional para enriquecer o desafio.
-
-REGRAS:
-1. O desafio deve estar alinhado com a sugestão do usuário.
-2. Use a filosofia de "Ambiguidade Intencional" - o prompt deve ser aberto o suficiente para permitir discussão.
-3. Classifique como "System Design" (provas, derivações) ou "Low Level Design" (cálculos, problemas específicos).
+Sua tarefa é gerar UM único desafio técnico (Teórico ou Aplicado) baseado na sugestão do usuário.
 
 FORMATO DE RESPOSTA (JSON válido):
 {
@@ -324,25 +277,13 @@ FORMATO DE RESPOSTA (JSON válido):
 `,
 
   computing: `
-Você é um especialista em recrutamento técnico de elite (nível FAANG).
-O usuário quer criar um desafio personalizado baseado em sua própria sugestão.
+Você é um especialista em recrutamento técnico de elite.
+O usuário quer criar um desafio técnico personalizado baseado em sua sugestão.
 
 SUGESTÃO DO USUÁRIO:
 {{USER_SUGGESTION}}
 
-CONTEÚDO DA NOTA (para contexto):
-{{NOTE_CONTENT}}
-
-Sua tarefa é gerar UM único desafio técnico baseado na sugestão do usuário.
-Use o conteúdo da nota como contexto adicional para enriquecer o desafio.
-
-REGRAS:
-1. O desafio deve estar alinhado com a sugestão do usuário.
-2. Use a filosofia de "Ambiguidade Intencional" - o prompt deve ser aberto o suficiente para permitir discussão.
-3. Classifique como:
-   - "System Design" (HLD): Replicação, Escalabilidade, Sistemas Distribuídos, Cache, Banco de Dados, Load Balancing, etc.
-   - "Low Level Design" (LLD): Estruturas de Dados, Algoritmos específicos, POO, Modularidade, Design Patterns.
-4. O prompt ambíguo deve ser vago o suficiente para que o candidato precise fazer perguntas de requisitos.
+Sua tarefa é gerar UM único desafio técnico (LLD ou HLD) que permita discutir requisitos e arquitetura.
 
 FORMATO DE RESPOSTA (JSON válido):
 {
@@ -357,25 +298,13 @@ FORMATO DE RESPOSTA (JSON válido):
 `,
 
   'data-engineering': `
-Você é um especialista em recrutamento para Engenharia de Dados (Data Engineering) nível Sênior/Staff.
-O usuário quer criar um desafio personalizado baseado em sua própria sugestão.
+Você é um especialista em recrutamento para Engenharia de Dados (Data Engineering).
+O usuário quer criar um desafio técnico personalizado.
 
 SUGESTÃO DO USUÁRIO:
 {{USER_SUGGESTION}}
 
-CONTEÚDO DA NOTA (para contexto):
-{{NOTE_CONTENT}}
-
-Sua tarefa é gerar UM único desafio técnico baseado na sugestão do usuário.
-Use o conteúdo da nota como contexto adicional para enriquecer o desafio.
-
-REGRAS:
-1. O desafio deve estar alinhado com a sugestão do usuário.
-2. Use a filosofia de "Ambiguidade Intencional" - o prompt deve ser aberto o suficiente para permitir discussão.
-3. Classifique como:
-   - "System Design" (HLD): Arquitetura de Data Lake, Migração, Pipeline de Dados, Streaming vs Batch.
-   - "Low Level Design" (LLD): Otimização Spark, Schema Evolution, Idempotência, Deduplicação.
-4. O prompt ambíguo deve ser vago o suficiente para que o candidato precise fazer perguntas de requisitos (SLA, volumetria, etc).
+Sua tarefa é gerar UM único desafio técnico (LLD ou HLD) baseado na sugestão do usuário, usando a nota como contexto adicional.
 
 FORMATO DE RESPOSTA (JSON válido):
 {

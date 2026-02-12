@@ -1,19 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkbookExercise, WorkbookSession, SubjectMode } from "../types";
 import { getExerciseGenerationPrompt, getSolutionGenerationPrompt } from "./prompts";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
-const apiKey = process.env.API_KEY || '';
-
-let client: GoogleGenAI | null = null;
-
-function getClient(): GoogleGenAI {
-    if (!client) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-}
-
-const MODEL_ID = "gemini-3-flash-preview";
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
 // ============================================================================
 // SYSTEM PROMPTS
@@ -179,7 +172,7 @@ export async function generateExerciseList(
             : exerciseListSchema;
 
         const response = await client.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7,
@@ -281,7 +274,7 @@ export async function generateWorkbookSolution(
         }
 
         const response = await client.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.3,

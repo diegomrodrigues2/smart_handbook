@@ -7,22 +7,16 @@ import {
     getNavigatorInteractionPrompt,
     getFullSolutionPrompt
 } from "./prompts";
+import { getClient, getSelectedModel, subscribe, resetClient } from "./settingsService";
 
 // ============================================================================
 // API CLIENT SETUP
 // ============================================================================
 
-const apiKey = process.env.API_KEY || '';
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!client && apiKey) {
-        client = new GoogleGenAI({ apiKey });
-    }
-    return client;
-};
-
-const MODEL_ID = "gemini-3-pro-preview";
+// Subscribe to settings changes to reset client when needed
+subscribe(() => {
+    resetClient();
+});
 
 // ============================================================================
 // LANGUAGE TEMPLATES
@@ -575,7 +569,7 @@ export const generatePairChallenges = async (
         }
 
         const response = await ai.models.generateContent({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: {
                 temperature: 0.7,
@@ -731,7 +725,7 @@ export const getNavigatorResponse = async (
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: { temperature: 0.7 }
         });
@@ -820,7 +814,7 @@ Foco Conceitual: ${challenge.conceptFocus?.join(', ')}`;
         }
 
         const responseStream = await ai.models.generateContentStream({
-            model: MODEL_ID,
+            model: getSelectedModel(),
             contents: [{ role: 'user', parts: contentParts }],
             config: { temperature: 0.5 }
         });

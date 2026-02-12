@@ -7,6 +7,8 @@ interface SidebarToolbarProps {
     onRefresh?: () => void;
     onCollapse: () => void;
     showRefresh: boolean;
+    showFavorites: boolean;
+    onToggleFavorites: () => void;
 }
 
 const SidebarToolbar: React.FC<SidebarToolbarProps> = ({
@@ -15,10 +17,20 @@ const SidebarToolbar: React.FC<SidebarToolbarProps> = ({
     onLoadDirectory,
     onRefresh,
     onCollapse,
-    showRefresh
+    showRefresh,
+    showFavorites,
+    onToggleFavorites
 }) => {
     return (
         <div className="flex items-center gap-1 px-2 py-2 border-b border-gray-200 text-gray-500 flex-shrink-0">
+            <button
+                onClick={onToggleFavorites}
+                className={`p-1.5 rounded transition-colors ${showFavorites ? 'bg-yellow-100 text-yellow-500' : 'hover:bg-gray-200'}`}
+                title="Show Favorites"
+            >
+                <i className={`${showFavorites ? 'fa-solid' : 'fa-regular'} fa-star`}></i>
+            </button>
+            <div className="w-px h-4 bg-gray-300 mx-1"></div>
             <button
                 onClick={onNewFile}
                 className="p-1.5 hover:bg-gray-200 rounded transition-colors"
